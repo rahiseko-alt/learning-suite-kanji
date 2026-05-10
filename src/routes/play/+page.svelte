@@ -38,6 +38,93 @@
   let showPraise = $state(false);
   // Session 267 v4: お祝いアニメ（花火 + 踊る動物 + 紙吹雪）を 3 秒間ページ全体で発火
   let showPraiseAnim = $state(false);
+
+  // Session 271 v2: 花火アニメ完全刷新（emoji 廃止 → 粒子放射）
+  // ①打ち上げ球 → ②0.3s 静止 → ③炸裂（5 パターン × 3 サイズ × 多色）
+  let fireworks = $state([]);
+  let fwSeq = 0;
+  function patternParticles(pattern, count) {
+    const ps = [];
+    for (let i = 0; i < count; i++) {
+      const t = i / count;
+      const angle = t * Math.PI * 2;
+      let dx = 0, dy = 0, gravity = false;
+      if (pattern === 'kiku') {
+        // 菊：円形・等間隔の長い尾
+        dx = Math.cos(angle);
+        dy = Math.sin(angle);
+      } else if (pattern === 'botan') {
+        // 牡丹：円形・コンパクト
+        dx = Math.cos(angle) * 0.78;
+        dy = Math.sin(angle) * 0.78;
+      } else if (pattern === 'yanagi') {
+        // 柳：上半球 + 重力で垂れ下がる
+        const a = t * Math.PI;
+        dx = Math.cos(a) * 0.92;
+        dy = -Math.sin(a) * 0.88;
+        gravity = true;
+      } else if (pattern === 'heart') {
+        // ハート：r = 16sin³θ, -(13cosθ - 5cos2θ - 2cos3θ - cos4θ)
+        const s = Math.sin(angle);
+        dx = (16 * s * s * s) / 17;
+        dy = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle)) / 17;
+      } else if (pattern === 'palm') {
+        // パルム：6 方向の太い枝（粒子を 6 グループに振り分け、層ごとに距離を伸ばす）
+        const branches = 6;
+        const branchIdx = i % branches;
+        const layer = Math.floor(i / branches);
+        const layers = Math.max(1, Math.ceil(count / branches));
+        const branchAngle = (branchIdx / branches) * Math.PI * 2 - Math.PI / 2;
+        const len = 0.55 + (layer / Math.max(1, layers - 1)) * 0.55;
+        dx = Math.cos(branchAngle) * len;
+        dy = Math.sin(branchAngle) * len;
+      }
+      ps.push({ dx, dy, gravity });
+    }
+    return ps;
+  }
+  function spawnFirework() {
+    const patterns = ['kiku', 'botan', 'yanagi', 'heart', 'palm'];
+    const sizes = ['s', 'm', 'l'];
+    const sizeRadius = { s: 11, m: 16, l: 22 };
+    const sizeCount = { s: 16, m: 22, l: 30 };
+    const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+    const size = sizes[Math.floor(Math.random() * sizes.length)];
+    const id = ++fwSeq;
+    const launchDur = 0.55 + Math.random() * 0.25;
+    const fw = {
+      id,
+      x: 16 + Math.random() * 68,
+      peakY: 16 + Math.random() * 34,
+      launchY: 92,
+      pattern,
+      size,
+      hue: Math.floor(Math.random() * 360),
+      launchDur,
+      radius: sizeRadius[size],
+      particles: patternParticles(pattern, sizeCount[size]),
+    };
+    fireworks = [...fireworks, fw];
+    setTimeout(() => {
+      fireworks = fireworks.filter((f) => f.id !== id);
+    }, (launchDur + 0.3 + 1.8) * 1000);
+  }
+  $effect(() => {
+    if (!showPraiseAnim) {
+      fireworks = [];
+      return;
+    }
+    let alive = true;
+    const tick = () => {
+      if (!alive) return;
+      spawnFirework();
+      setTimeout(tick, 220 + Math.random() * 240);
+    };
+    tick();
+    return () => {
+      alive = false;
+    };
+  });
   let showSettings = $state(false);
   let countdown = $state(0); // 0 = 非表示 / 3,2,1 = カウントダウン中
   let cdEl = $state();
@@ -318,9 +405,21 @@
 
     {#if showPraiseAnim}
       <div class="praise-bg-anim" aria-hidden="true">
-        <!-- 花火（12 個・遅延ばらけ） -->
-        {#each Array(12) as _, i (i)}
-          <span class="firework" style="left:{(i * 137) % 95}vw; top:{15 + (i * 53) % 55}vh; animation-delay:{(i * 0.18) % 1.5}s;">🎆</span>
+        <!-- Session 271 v2: 花火（連発・①打ち上げ→②0.3s 静止→③炸裂・5 パターン×3 サイズ） -->
+        {#each fireworks as fw (fw.id)}
+          <div
+            class="fw-shell"
+            style="--x:{fw.x}vw; --launch-y:{fw.launchY}vh; --peak-y:{fw.peakY}vh; --launch-dur:{fw.launchDur}s; --burst-delay:{fw.launchDur + 0.3}s; --hue:{fw.hue}; --radius:{fw.radius}vmin;"
+          >
+            <span class="fw-rocket fw-size-{fw.size}"></span>
+            {#each fw.particles as p, j (j)}
+              <span
+                class="fw-particle fw-{fw.pattern} fw-size-{fw.size}"
+                class:fw-gravity={p.gravity}
+                style="--dx:{p.dx}; --dy:{p.dy}; --idx:{j};"
+              ></span>
+            {/each}
+          </div>
         {/each}
         <!-- 踊る動物（画面下に並ぶ） -->
         {#each ['🐶','🐱','🐰','🐻','🦁','🐼','🐯','🦊'] as a, i (a)}
@@ -682,19 +781,79 @@
     z-index: 19;
     overflow: hidden;
   }
-  .firework {
+  /* === 花火（Session 271 v2 完全刷新・粒子放射式） === */
+  .fw-shell {
     position: absolute;
-    font-size: clamp(2.5rem, 7vw, 4rem);
-    transform: scale(0);
-    opacity: 0;
-    animation: firework-pop 1.4s ease-out infinite;
-    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.8));
+    left: var(--x);
+    top: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
   }
-  @keyframes firework-pop {
-    0%   { transform: scale(0.2) rotate(0deg);   opacity: 0; }
-    20%  { transform: scale(1.6) rotate(45deg);  opacity: 1; }
-    60%  { transform: scale(2.2) rotate(180deg); opacity: 0.8; }
-    100% { transform: scale(2.8) rotate(360deg); opacity: 0; }
+  .fw-rocket {
+    position: absolute;
+    top: var(--launch-y);
+    left: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: hsl(var(--hue), 90%, 78%);
+    box-shadow:
+      0 0 14px hsl(var(--hue), 95%, 78%),
+      0 0 28px hsl(var(--hue), 95%, 60%),
+      0 0 4px white;
+    transform: translate(-50%, 0);
+    opacity: 0;
+    animation: fw-launch var(--launch-dur) cubic-bezier(0.45, 0.1, 0.55, 1) forwards;
+  }
+  .fw-rocket.fw-size-s { width: 4px; height: 4px; }
+  .fw-rocket.fw-size-l { width: 8px; height: 8px; }
+  @keyframes fw-launch {
+    0%   { top: var(--launch-y); opacity: 0; transform: translate(-50%, 0) scale(0.5); }
+    8%   { opacity: 1; transform: translate(-50%, 0) scale(1.05); }
+    88%  { opacity: 1; }
+    100% { top: var(--peak-y); opacity: 0; transform: translate(-50%, 0) scale(0.7); }
+  }
+  .fw-particle {
+    position: absolute;
+    top: var(--peak-y);
+    left: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: hsl(calc(var(--hue) + var(--idx) * 6), 95%, 68%);
+    box-shadow:
+      0 0 8px hsl(calc(var(--hue) + var(--idx) * 6), 95%, 72%),
+      0 0 16px hsl(var(--hue), 95%, 60%);
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    animation: fw-particle-fly 1.5s cubic-bezier(0.15, 0.75, 0.4, 1) forwards;
+    animation-delay: var(--burst-delay);
+  }
+  .fw-particle.fw-size-s { width: 4px; height: 4px; }
+  .fw-particle.fw-size-l { width: 8px; height: 8px; }
+  /* パルムは粒子を一回り大きく（太い枝感） */
+  .fw-particle.fw-palm { width: 8px; height: 8px; }
+  .fw-particle.fw-palm.fw-size-s { width: 6px; height: 6px; }
+  .fw-particle.fw-palm.fw-size-l { width: 11px; height: 11px; }
+  @keyframes fw-particle-fly {
+    0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+    8%   { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
+    60%  { transform: translate(calc(-50% + var(--dx) * var(--radius)), calc(-50% + var(--dy) * var(--radius))) scale(0.85); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx) * var(--radius) * 1.05), calc(-50% + var(--dy) * var(--radius) * 1.05)) scale(0.15); opacity: 0; }
+  }
+  .fw-particle.fw-gravity {
+    animation-name: fw-particle-fall;
+    animation-duration: 1.8s;
+  }
+  @keyframes fw-particle-fall {
+    0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+    8%   { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
+    35%  { transform: translate(calc(-50% + var(--dx) * var(--radius)), calc(-50% + var(--dy) * var(--radius))) scale(0.95); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx) * var(--radius) * 1.1), calc(-50% + var(--dy) * var(--radius) + 28vmin)) scale(0.35); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fw-shell { display: none; }
   }
   .dancer {
     position: absolute;

@@ -390,7 +390,7 @@
               {/if}
             </div>
 
-            <div class="canvas-host" class:locked={!startedFlags[i]} aria-disabled={!startedFlags[i]}>
+            <div class="canvas-host" class:locked={!startedFlags[i] || completedFlags[i]} aria-disabled={!startedFlags[i] || completedFlags[i]}>
               <div class="reading-badge" aria-hidden="true">{k.reading ?? ''}</div>
               <TraceCanvas
                 bind:this={traceComps[i]}

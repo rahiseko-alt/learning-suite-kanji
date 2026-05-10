@@ -2,6 +2,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
+  import { untrack } from 'svelte';
   import TraceCanvas from '$lib/components/TraceCanvas.svelte';
   import AssetSettings from '$lib/components/AssetSettings.svelte';
   import { SETS, SET_ORDER, getSetById } from '$lib/data/sets.js';
@@ -110,19 +111,25 @@
     }, (launchDur + 0.3 + 1.8) * 1000);
   }
   $effect(() => {
-    if (!showPraiseAnim) {
-      fireworks = [];
+    // showPraiseAnim だけを依存に。fireworks の読み書きは untrack で隔離（自己依存ループ回避）
+    const visible = showPraiseAnim;
+    if (!visible) {
+      untrack(() => {
+        fireworks = [];
+      });
       return;
     }
     let alive = true;
+    let timeoutId = null;
     const tick = () => {
       if (!alive) return;
-      spawnFirework();
-      setTimeout(tick, 220 + Math.random() * 240);
+      untrack(() => spawnFirework());
+      timeoutId = setTimeout(tick, 220 + Math.random() * 240);
     };
-    tick();
+    untrack(() => tick());
     return () => {
       alive = false;
+      if (timeoutId) clearTimeout(timeoutId);
     };
   });
   let showSettings = $state(false);

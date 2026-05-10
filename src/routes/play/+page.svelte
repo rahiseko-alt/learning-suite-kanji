@@ -11,6 +11,12 @@
   let activeSet = $derived(getSetById(setId));
   // Session 266: 複数文字対応（kanjis 配列 + currentIndex で順次アクティブ化）
   let kanjis = $derived(activeSet.kanji);
+  // Session 267 v3: お題のひらがな（各 kanji の reading 結合・例: 愛知県 → あいちけん）
+  let activeReading = $derived(kanjis.map((k) => k.reading || '').join(''));
+
+  function goHome() {
+    goto(`${base}/`);
+  }
   let currentIndex = $state(0);
   let activeKanji = $derived(kanjis[currentIndex] ?? kanjis[0]);
   // 次のセット（最後尾なら null → ホームへ動線）
@@ -180,12 +186,14 @@
     </div>
   {/if}
 
-  <!-- 設定ボタン（左上） -->
-  <button
-    class="btn btn--icon settings-pos"
-    onclick={() => (showSettings = true)}
-    aria-label="設定"
-  >⚙</button>
+  <!-- 設定ボタン（start phase のみ左上・practice phase では topbar 内に配置） -->
+  {#if phase === 'start'}
+    <button
+      class="btn btn--icon settings-pos"
+      onclick={() => (showSettings = true)}
+      aria-label="設定"
+    >⚙</button>
+  {/if}
 
   <!-- 応援キャラクター（右上 floating） -->
   <div class="character" aria-hidden="true">
@@ -198,14 +206,16 @@
 
   {#if phase === 'start'}
     <div class="start-screen">
-      <div class="kanji-display">{activeSet.name}</div>
-      <h1>「{activeSet.name}」のかんじを かこう！</h1>
+      <div class="kanji-display">{activeReading}</div>
+      <h1>「{activeReading}」を かこう！</h1>
       <button class="btn btn--primary big" onclick={start}>▶ はじめる</button>
     </div>
 
   {:else if phase === 'practice'}
-    <div class="topbar">
-      <div class="title-small">「{activeSet.name}」</div>
+    <div class="topbar topbar-sticky">
+      <button class="btn btn--icon home-btn" onclick={goHome} aria-label="ホームへ">🏠</button>
+      <div class="title-small">「{activeReading}」</div>
+      <button class="btn btn--icon settings-btn" onclick={() => (showSettings = true)} aria-label="設定">⚙</button>
     </div>
 
     <!-- Session 267 S4: 上部グローバルボタン撤去（各枠ボタンが代替） -->
@@ -230,6 +240,7 @@
             </div>
 
             <div class="canvas-host">
+              <div class="reading-badge" aria-hidden="true">{k.reading ?? ''}</div>
               <TraceCanvas
                 bind:this={traceComps[i]}
                 kanji={k}
@@ -356,14 +367,14 @@
     z-index: 4;
   }
 
-  /* === 応援キャラクター（右上 floating） === */
+  /* === 応援キャラクター（右上 floating・Session 267 v3 で +50% 拡大） === */
   .character {
     position: absolute;
     top: 0.6rem;
     right: 0.8rem;
     z-index: 3;
-    width: clamp(3.5rem, 12vw, 5rem);
-    height: clamp(3.5rem, 12vw, 5rem);
+    width: clamp(5.25rem, 18vw, 7.5rem);
+    height: clamp(5.25rem, 18vw, 7.5rem);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -376,7 +387,7 @@
     border-radius: 50%;
   }
   .default-char {
-    font-size: clamp(2.8rem, 10vw, 4rem);
+    font-size: clamp(4.2rem, 15vw, 6rem);
     line-height: 1;
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.15));
   }
@@ -416,23 +427,55 @@
   }
 
   /* === practice phase === */
+  /* Session 267 v3: topbar を sticky 化 + 左 home / 中央 title / 右 settings */
   .topbar {
-    position: relative;
-    z-index: 1;
+    z-index: 10;
     width: 100%;
     max-width: 480px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    margin-top: 2.5rem; /* 左上の設定ボタンと衝突回避 */
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .topbar-sticky {
+    position: sticky;
+    top: 0;
+    background: rgba(254, 243, 199, 0.92);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0 0 1rem 1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  }
+  .home-btn,
+  .settings-btn {
+    flex: 0 0 auto;
   }
   .title-small {
+    flex: 1;
+    text-align: center;
     font-size: clamp(1.5rem, 6vw, 2rem);
     font-weight: 700;
     color: #1f2937;
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.85);
     border-radius: 999px;
     padding: 0.3rem 1.2rem;
+  }
+  /* Session 267 v3: 各記入枠の左上に永続表示するひらがなラベル */
+  .reading-badge {
+    position: absolute;
+    top: 0.4rem;
+    left: 0.4rem;
+    z-index: 4;
+    font-size: clamp(1.1rem, 4vw, 1.5rem);
+    font-weight: 800;
+    color: #1f2937;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid #f59e0b;
+    border-radius: 0.6rem;
+    padding: 0.1rem 0.5rem;
+    pointer-events: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
   /* Session 266: 複数文字横並び対応 — 単漢字は max-width 480px、複数は 800px に拡張 */
   .play-area {
@@ -679,13 +722,13 @@
       0 1px 0 #94a3b8,
       0 2px 4px rgba(100, 116, 139, 0.15);
   }
-  /* icon（円形・小型立体） */
+  /* icon（円形・小型立体・Session 267 v3 で +25% 拡大） */
   :global(.btn--icon) {
-    width: 2.6rem;
-    height: 2.6rem;
+    width: 3.25rem;
+    height: 3.25rem;
     padding: 0;
     border-radius: 999px;
-    font-size: 1.2rem;
+    font-size: 1.5rem;
     background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
     color: #475569;
     box-shadow:

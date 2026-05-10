@@ -4,23 +4,33 @@
   import { base } from '$app/paths';
   import TraceCanvas from '$lib/components/TraceCanvas.svelte';
   import AssetSettings from '$lib/components/AssetSettings.svelte';
-  import { getSetById, SET_ORDER } from '$lib/data/sets.js';
+  import { SETS, SET_ORDER, getSetById } from '$lib/data/sets.js';
 
-  // クエリパラメータ ?set=i / ?set=fei / ?set=aichi で漢字セットを切替（未指定時は井）
-  let setId = $derived($page.url.searchParams.get('set') ?? 'i');
-  let activeSet = $derived(getSetById(setId));
-  // Session 266: 複数文字対応（kanjis 配列 + currentIndex で順次アクティブ化）
-  let kanjis = $derived(activeSet.kanji);
-  // Session 267 v3: お題のひらがな（各 kanji の reading 結合・例: 愛知県 → あいちけん）
+  // Session 267 v5: 複数 sets= 対応（カンマ区切り）/ 単数 ?set= 互換も維持
+  let rawSetIds = $derived(
+    ($page.url.searchParams.get('sets') ?? $page.url.searchParams.get('set') ?? 'i')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
+  let activeSets = $derived(rawSetIds.map((id) => SETS[id]).filter(Boolean));
+  let activeSet = $derived(activeSets[0] ?? getSetById('i'));
+  // 複数 set の全 kanji を結合（順次練習）
+  let kanjis = $derived(activeSets.flatMap((s) => s.kanji));
+  // お題のひらがな（各 kanji の reading 結合）
   let activeReading = $derived(kanjis.map((k) => k.reading || '').join(''));
+  // 表示用セット名（複数なら「井 / 飛 / 愛知県」スラッシュ区切り）
+  let activeSetNames = $derived(activeSets.map((s) => s.name).join(' / '));
 
   function goHome() {
     goto(`${base}/`);
   }
   let currentIndex = $state(0);
   let activeKanji = $derived(kanjis[currentIndex] ?? kanjis[0]);
-  // 次のセット（最後尾なら null → ホームへ動線）
-  let nextSetId = $derived(SET_ORDER[SET_ORDER.indexOf(setId) + 1] ?? null);
+  // 次のセット動線（最後のセットの SET_ORDER 次）
+  let nextSetId = $derived(
+    SET_ORDER[SET_ORDER.indexOf(rawSetIds[rawSetIds.length - 1]) + 1] ?? null
+  );
 
   let phase = $state('start');
   let traceComps = $state([]);
@@ -43,9 +53,9 @@
     completedFlags = Array(len).fill(false);
   });
 
-  // setId 変化時に currentIndex リセット（セット切替時の状態クリア）
+  // sets 変化時に currentIndex リセット（セット切替時の状態クリア）
   $effect(() => {
-    setId; // 依存追跡
+    rawSetIds.join(','); // 依存追跡
     currentIndex = 0;
     showPraise = false;
     animationStarted = false;
@@ -246,7 +256,7 @@
 
   {#if phase === 'start'}
     <div class="start-screen">
-      <div class="kanji-display">{activeSet.name}</div>
+      <div class="kanji-display">{activeSetNames}</div>
       <h1>「{activeReading}」を かこう！</h1>
       <button class="btn btn--primary big" onclick={start}>▶ はじめる</button>
     </div>
@@ -254,7 +264,7 @@
   {:else if phase === 'practice'}
     <div class="topbar topbar-sticky">
       <button class="btn btn--icon home-btn" onclick={goHome} aria-label="ホームへ">🏠</button>
-      <div class="title-small">「{activeSet.name}」</div>
+      <div class="title-small">「{activeSetNames}」</div>
       <button class="btn btn--icon settings-btn" onclick={() => (showSettings = true)} aria-label="設定">⚙</button>
     </div>
 
@@ -346,11 +356,11 @@
             </div>
           </div>
           <h2>やったね！！</h2>
-          <p>{kanjis.length > 1 ? `「${activeSet.name}」ぜんぶかけたね！` : 'かんぺきにかけたね！'}</p>
+          <p>{kanjis.length > 1 ? `「${activeSetNames}」ぜんぶかけたね！` : 'かんぺきにかけたね！'}</p>
           <div class="praise-actions">
             <button class="btn btn--primary big" onclick={retry}>もういっかい</button>
             {#if nextSetId}
-              <button class="btn btn--primary big next-btn" onclick={() => goto(`${base}/play?set=${nextSetId}`)}>
+              <button class="btn btn--primary big next-btn" onclick={() => goto(`${base}/play?sets=${nextSetId}`)}>
                 つぎへ →
               </button>
             {:else}

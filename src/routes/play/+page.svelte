@@ -9,13 +9,13 @@
 
   // Session 267 v5: 複数 sets= 対応（カンマ区切り）/ 単数 ?set= 互換も維持
   let rawSetIds = $derived(
-    ($page.url.searchParams.get('sets') ?? $page.url.searchParams.get('set') ?? 'i')
+    ($page.url.searchParams.get('sets') ?? $page.url.searchParams.get('set') ?? 'fei')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean)
   );
   let activeSets = $derived(rawSetIds.map((id) => SETS[id]).filter(Boolean));
-  let activeSet = $derived(activeSets[0] ?? getSetById('i'));
+  let activeSet = $derived(activeSets[0] ?? getSetById('fei'));
   // 複数 set の全 kanji を結合（順次練習）
   let kanjis = $derived(activeSets.flatMap((s) => s.kanji));
   // お題のひらがな（各 kanji の reading 結合）

@@ -20,6 +20,12 @@
       key: 'emoji', label: 'えもじ', icon: '🎉', hint: 'できたときの おいわい',
       xMin: -50, xMax: 50, yMin: -50, yMax: 50,
       defaults: { x: 0, y: 0, scale: 1 }
+    },
+    {
+      key: 'icon', label: 'ホームアイコン', icon: '📱',
+      hint: 'スマホのホーム画面に追加したときのアイコン',
+      noAdjuster: true,
+      defaults: { x: 0, y: 0, scale: 1 }
     }
   ];
 
@@ -85,23 +91,25 @@
             {/if}
           </div>
 
-          <div class="adjuster">
-            <label class="adj-row">
-              <span class="adj-label">ひだり ↔ みぎ</span>
-              <input type="range" min={slot.xMin} max={slot.xMax} step="1" bind:value={adjustments[slot.key].x} />
-              <span class="adj-val">{adjustments[slot.key].x}</span>
-            </label>
-            <label class="adj-row">
-              <span class="adj-label">うえ ↕ した</span>
-              <input type="range" min={slot.yMin} max={slot.yMax} step="1" bind:value={adjustments[slot.key].y} />
-              <span class="adj-val">{adjustments[slot.key].y}</span>
-            </label>
-            <label class="adj-row">
-              <span class="adj-label">おおきさ</span>
-              <input type="range" min="0.5" max="3" step="0.1" bind:value={adjustments[slot.key].scale} />
-              <span class="adj-val">{adjustments[slot.key].scale.toFixed(1)}x</span>
-            </label>
-          </div>
+          {#if !slot.noAdjuster}
+            <div class="adjuster">
+              <label class="adj-row">
+                <span class="adj-label">ひだり ↔ みぎ</span>
+                <input type="range" min={slot.xMin} max={slot.xMax} step="1" bind:value={adjustments[slot.key].x} />
+                <span class="adj-val">{adjustments[slot.key].x}</span>
+              </label>
+              <label class="adj-row">
+                <span class="adj-label">うえ ↕ した</span>
+                <input type="range" min={slot.yMin} max={slot.yMax} step="1" bind:value={adjustments[slot.key].y} />
+                <span class="adj-val">{adjustments[slot.key].y}</span>
+              </label>
+              <label class="adj-row">
+                <span class="adj-label">おおきさ</span>
+                <input type="range" min="0.5" max="3" step="0.1" bind:value={adjustments[slot.key].scale} />
+                <span class="adj-val">{adjustments[slot.key].scale.toFixed(1)}x</span>
+              </label>
+            </div>
+          {/if}
 
           <div class="slot-actions">
             <label class="btn btn--primary upload-label">

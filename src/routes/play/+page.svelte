@@ -65,13 +65,15 @@
   let assets = $state({
     character: null, // null = デフォルト🐱 / DataURL = アップロード画像
     background: null,
-    emoji: null
+    emoji: null,
+    icon: null // Session 267 v4: ホーム画面アイコン（user upload 時 apple-touch-icon を JS で差替）
   });
   // Session 267 v3: 各画像の位置/拡大縮小調整（character/emoji = transform translate+scale 用、background = background-position/size 用）
   let adjustments = $state({
     character: { x: 0, y: 0, scale: 1 },
     background: { x: 50, y: 50, scale: 1 }, // background-position 単位 % / size は scale*100%
-    emoji: { x: 0, y: 0, scale: 1 }
+    emoji: { x: 0, y: 0, scale: 1 },
+    icon: { x: 0, y: 0, scale: 1 }
   });
 
   const STORAGE_KEY = 'learning-suite:kanji:assets';
@@ -104,6 +106,16 @@
       localStorage.setItem(ADJ_KEY, JSON.stringify(adjustments));
     } catch (e) {}
   }
+
+  // Session 267 v4: user upload icon があれば apple-touch-icon を動的に差し替え
+  $effect(() => {
+    if (typeof document === 'undefined') return;
+    const link = document.getElementById('apple-touch-icon');
+    if (!link) return;
+    if (assets.icon) {
+      link.href = assets.icon;
+    }
+  });
 
   function start() {
     phase = 'practice';

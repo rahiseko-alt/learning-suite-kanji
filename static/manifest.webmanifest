@@ -1,0 +1,32 @@
+{
+  "name": "かんじでアソボ！",
+  "short_name": "かんじであそぼ",
+  "description": "ひらがなで漢字を書く練習アプリ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fef3c7",
+  "theme_color": "#fbbf24",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "icon-app.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-app-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

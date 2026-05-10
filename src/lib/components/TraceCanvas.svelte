@@ -394,21 +394,24 @@
 
 <style>
   .trace-wrap {
-    /* Session 265: grid で canvas-stack の aspect-ratio が row 高さを決定 → lyric-window が同じ高さに stretch */
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 0.6rem;
+    /* Session 267 v2: grid → 1 column で canvas-stack を全幅化（中心線をスタート/できた!ボタンと揃える）。lyric-window は canvas の右に absolute overlay */
+    position: relative;
     width: 100%;
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
   }
 
-  /* Session 265: 覚え歌の表示窓（grid セルとして row 高さに自動 stretch → canvas と同じ縦幅） */
+  /* Session 267 v2: 覚え歌の表示窓（canvas-stack 右辺に absolute overlay。書字の邪魔にならないよう pointer-events: none） */
   .lyric-window {
-    position: relative;
+    position: absolute;
+    top: 0;
+    right: 0;
     width: clamp(2rem, 7vw, 2.6rem);
+    height: 100%;
     overflow: hidden;
+    pointer-events: none;
+    z-index: 2;
   }
   .lyric-strip {
     /* Session 265: position: absolute で lyric-window の高さに影響を与えない（grid row 高さ = canvas-stack のみ） */

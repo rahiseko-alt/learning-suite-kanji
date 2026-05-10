@@ -95,11 +95,13 @@
     const size = sizes[Math.floor(Math.random() * sizes.length)];
     const baseHue = huePalette[Math.floor(Math.random() * huePalette.length)];
     const id = ++fwSeq;
-    const launchDur = 0.55 + Math.random() * 0.25;
+    // 打ち上げ距離拡大（peakY を画面上 1/4 に上げた分、距離 +60% 増）→ launchDur も延長
+    const launchDur = 0.85 + Math.random() * 0.35;
     const fw = {
       id,
       x: 16 + Math.random() * 68,
-      peakY: 16 + Math.random() * 34,
+      // praise-card と被らないよう画面上 1/4（6-22vh）で炸裂させる
+      peakY: 6 + Math.random() * 16,
       launchY: 92,
       pattern,
       size,
@@ -273,7 +275,9 @@
       showPraise = true;
       // Session 267 v4: 全画面お祝いアニメを 3 秒間発火
       showPraiseAnim = true;
-      setTimeout(() => { showPraiseAnim = false; }, 5000);
+      // 6 秒：launchDur 0.85-1.2s + burst-delay 0.3s + 粒子 1.6s = 約 3 秒の単発寿命
+      // 最後に発射した花火の炸裂を最後まで見せるため、終端 1.5 秒は新規 spawn が走っても OK
+      setTimeout(() => { showPraiseAnim = false; }, 6000);
     } else {
       animationStarted = false;
     }

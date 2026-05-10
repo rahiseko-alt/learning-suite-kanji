@@ -1,12 +1,26 @@
 <script>
   // ユーザーが画像をアップロードして UI を着せ替えできる設定モーダル
   // ボタン立体感は global の .btn / .btn--primary / .btn--secondary / .btn--icon に統一
-  let { assets = $bindable(), onclose } = $props();
+  let { assets = $bindable(), adjustments = $bindable(), onclose } = $props();
 
+  // Session 267 v3: 各 slot に位置・拡大縮小スライダー追加
+  // background は background-position 用に 0-100% 範囲、character/emoji は transform translate 用に -50〜50%
   const SLOTS = [
-    { key: 'character', label: 'キャラクター', icon: '🐱', hint: '応援してくれるよ' },
-    { key: 'background', label: 'はいけい', icon: '🌈', hint: 'お部屋のかべがみ' },
-    { key: 'emoji', label: 'えもじ', icon: '🎉', hint: 'できたときの おいわい' }
+    {
+      key: 'character', label: 'キャラクター', icon: '🐱', hint: '応援してくれるよ',
+      xMin: -50, xMax: 50, yMin: -50, yMax: 50,
+      defaults: { x: 0, y: 0, scale: 1 }
+    },
+    {
+      key: 'background', label: 'はいけい', icon: '🌈', hint: 'お部屋のかべがみ',
+      xMin: 0, xMax: 100, yMin: 0, yMax: 100,
+      defaults: { x: 50, y: 50, scale: 1 }
+    },
+    {
+      key: 'emoji', label: 'えもじ', icon: '🎉', hint: 'できたときの おいわい',
+      xMin: -50, xMax: 50, yMin: -50, yMax: 50,
+      defaults: { x: 0, y: 0, scale: 1 }
+    }
   ];
 
   function handleFile(e, key) {
@@ -24,8 +38,9 @@
     e.target.value = '';
   }
 
-  function reset(key) {
-    assets[key] = null;
+  function reset(slot) {
+    assets[slot.key] = null;
+    Object.assign(adjustments[slot.key], slot.defaults);
   }
 </script>
 
@@ -56,11 +71,36 @@
 
           <div class="slot-preview" class:has-img={assets[slot.key]}>
             {#if assets[slot.key]}
-              <img src={assets[slot.key]} alt={slot.label} />
+              <img
+                src={assets[slot.key]}
+                alt={slot.label}
+                style:transform={slot.key === 'background' ? null : `translate(${adjustments[slot.key].x}%, ${adjustments[slot.key].y}%) scale(${adjustments[slot.key].scale})`}
+                style:object-position={slot.key === 'background' ? `${adjustments[slot.key].x}% ${adjustments[slot.key].y}%` : null}
+                style:width={slot.key === 'background' ? `${Math.round(adjustments[slot.key].scale * 100)}%` : null}
+                style:height={slot.key === 'background' ? `${Math.round(adjustments[slot.key].scale * 100)}%` : null}
+              />
             {:else}
               <div class="default-icon">{slot.icon}</div>
               <div class="default-text">デフォルト</div>
             {/if}
+          </div>
+
+          <div class="adjuster">
+            <label class="adj-row">
+              <span class="adj-label">ひだり ↔ みぎ</span>
+              <input type="range" min={slot.xMin} max={slot.xMax} step="1" bind:value={adjustments[slot.key].x} />
+              <span class="adj-val">{adjustments[slot.key].x}</span>
+            </label>
+            <label class="adj-row">
+              <span class="adj-label">うえ ↕ した</span>
+              <input type="range" min={slot.yMin} max={slot.yMax} step="1" bind:value={adjustments[slot.key].y} />
+              <span class="adj-val">{adjustments[slot.key].y}</span>
+            </label>
+            <label class="adj-row">
+              <span class="adj-label">おおきさ</span>
+              <input type="range" min="0.5" max="3" step="0.1" bind:value={adjustments[slot.key].scale} />
+              <span class="adj-val">{adjustments[slot.key].scale.toFixed(1)}x</span>
+            </label>
           </div>
 
           <div class="slot-actions">
@@ -72,9 +112,7 @@
                 onchange={(e) => handleFile(e, slot.key)}
               />
             </label>
-            {#if assets[slot.key]}
-              <button class="btn btn--secondary" onclick={() => reset(slot.key)}>もどす</button>
-            {/if}
+            <button class="btn btn--secondary" onclick={() => reset(slot)}>もどす</button>
           </div>
         </section>
       {/each}
@@ -183,6 +221,38 @@
     font-size: 0.75rem;
     color: #94a3b8;
     font-weight: 700;
+  }
+
+  /* Session 267 v3: 位置/拡大縮小スライダー */
+  .adjuster {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+    padding: 0.5rem 0.6rem;
+    background: rgba(255, 255, 255, 0.55);
+    border-radius: 0.5rem;
+  }
+  .adj-row {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr 2.6rem;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+  .adj-label {
+    color: #475569;
+    font-weight: 700;
+  }
+  .adj-row input[type='range'] {
+    width: 100%;
+    accent-color: #f59e0b;
+  }
+  .adj-val {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: #1f2937;
+    font-weight: 800;
   }
 
   .slot-actions {

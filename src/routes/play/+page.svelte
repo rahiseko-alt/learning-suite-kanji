@@ -65,8 +65,15 @@
     background: null,
     emoji: null
   });
+  // Session 267 v3: 各画像の位置/拡大縮小調整（character/emoji = transform translate+scale 用、background = background-position/size 用）
+  let adjustments = $state({
+    character: { x: 0, y: 0, scale: 1 },
+    background: { x: 50, y: 50, scale: 1 }, // background-position 単位 % / size は scale*100%
+    emoji: { x: 0, y: 0, scale: 1 }
+  });
 
   const STORAGE_KEY = 'learning-suite:kanji:assets';
+  const ADJ_KEY = 'learning-suite:kanji:adjustments';
 
   $effect(() => {
     if (typeof window === 'undefined') return;
@@ -78,6 +85,13 @@
         if (data.background) assets.background = data.background;
         if (data.emoji) assets.emoji = data.emoji;
       }
+      const savedAdj = localStorage.getItem(ADJ_KEY);
+      if (savedAdj) {
+        const data = JSON.parse(savedAdj);
+        for (const key of ['character', 'background', 'emoji']) {
+          if (data[key]) Object.assign(adjustments[key], data[key]);
+        }
+      }
     } catch (e) {}
   });
 
@@ -85,6 +99,7 @@
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(assets));
+      localStorage.setItem(ADJ_KEY, JSON.stringify(adjustments));
     } catch (e) {}
   }
 
@@ -173,6 +188,8 @@
 <main
   class="page"
   style:background-image={assets.background ? `url("${assets.background}")` : null}
+  style:background-position={assets.background ? `${adjustments.background.x}% ${adjustments.background.y}%` : null}
+  style:background-size={assets.background ? `${Math.round(adjustments.background.scale * 100)}% auto` : null}
 >
   <!-- 背景装飾（デフォルト時のみ表示・子供向けポップアート風の雲） -->
   {#if !assets.background}
@@ -195,13 +212,19 @@
     >⚙</button>
   {/if}
 
-  <!-- 応援キャラクター（右上 floating） -->
-  <div class="character" aria-hidden="true">
-    {#if assets.character}
-      <img src={assets.character} alt="" />
-    {:else}
-      <div class="default-char">🐱</div>
-    {/if}
+  <!-- 応援キャラクター（右上 floating・Session 267 v3 で位置・スケール調整可。char-bob は inner に分離） -->
+  <div
+    class="character"
+    aria-hidden="true"
+    style:transform={`translate(${adjustments.character.x}%, ${adjustments.character.y}%) scale(${adjustments.character.scale})`}
+  >
+    <div class="character-inner">
+      {#if assets.character}
+        <img src={assets.character} alt="" />
+      {:else}
+        <div class="default-char">🐱</div>
+      {/if}
+    </div>
   </div>
 
   {#if phase === 'start'}
@@ -276,12 +299,17 @@
             <span class="conf c4">💫</span>
             <span class="conf c5">🌟</span>
           </div>
-          <div class="praise-emoji">
-            {#if assets.emoji}
-              <img src={assets.emoji} alt="" />
-            {:else}
-              🎉
-            {/if}
+          <div
+            class="praise-emoji"
+            style:transform={`translate(${adjustments.emoji.x}%, ${adjustments.emoji.y}%) scale(${adjustments.emoji.scale})`}
+          >
+            <div class="praise-emoji-inner">
+              {#if assets.emoji}
+                <img src={assets.emoji} alt="" />
+              {:else}
+                🎉
+              {/if}
+            </div>
           </div>
           <h2>やったね！！</h2>
           <p>{kanjis.length > 1 ? `「${activeSet.name}」ぜんぶかけたね！` : 'かんぺきにかけたね！'}</p>
@@ -303,7 +331,7 @@
   {/if}
 
   {#if showSettings}
-    <AssetSettings bind:assets onclose={closeSettings} />
+    <AssetSettings bind:assets bind:adjustments onclose={closeSettings} />
   {/if}
 </main>
 
@@ -367,7 +395,8 @@
     z-index: 4;
   }
 
-  /* === 応援キャラクター（右上 floating・Session 267 v3 で +50% 拡大） === */
+  /* === 応援キャラクター（右上 floating・Session 267 v3 で +50% 拡大 + 位置/スケール調整可） === */
+  /* .character には user の transform、char-bob アニメは .character-inner に分離（衝突回避） */
   .character {
     position: absolute;
     top: 0.6rem;
@@ -375,6 +404,10 @@
     z-index: 3;
     width: clamp(5.25rem, 18vw, 7.5rem);
     height: clamp(5.25rem, 18vw, 7.5rem);
+  }
+  .character-inner {
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -596,10 +629,14 @@
     animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
     overflow: visible;
   }
+  /* Session 267 v3: user transform 効くように .praise-emoji-inner に bounce 分離 */
   .praise-emoji {
     font-size: clamp(3.5rem, 14vw, 5rem);
     line-height: 1;
     margin-bottom: 0.5rem;
+  }
+  .praise-emoji-inner {
+    display: inline-block;
     animation: bounce 0.7s ease-in-out infinite alternate;
   }
   .praise-emoji img {

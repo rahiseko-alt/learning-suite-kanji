@@ -26,6 +26,8 @@
   let traceComps = $state([]);
   let animationStarted = $state(false);
   let showPraise = $state(false);
+  // Session 267 v4: お祝いアニメ（花火 + 踊る動物 + 紙吹雪）を 3 秒間ページ全体で発火
+  let showPraiseAnim = $state(false);
   let showSettings = $state(false);
   let countdown = $state(0); // 0 = 非表示 / 3,2,1 = カウントダウン中
   let cdEl = $state();
@@ -150,6 +152,9 @@
     completedFlags = completedFlags.with(i, true);
     if (completedFlags.every((f) => f)) {
       showPraise = true;
+      // Session 267 v4: 全画面お祝いアニメを 3 秒間発火
+      showPraiseAnim = true;
+      setTimeout(() => { showPraiseAnim = false; }, 3000);
     } else {
       animationStarted = false;
     }
@@ -229,7 +234,7 @@
 
   {#if phase === 'start'}
     <div class="start-screen">
-      <div class="kanji-display">{activeReading}</div>
+      <div class="kanji-display">{activeSet.name}</div>
       <h1>「{activeReading}」を かこう！</h1>
       <button class="btn btn--primary big" onclick={start}>▶ はじめる</button>
     </div>
@@ -237,7 +242,7 @@
   {:else if phase === 'practice'}
     <div class="topbar topbar-sticky">
       <button class="btn btn--icon home-btn" onclick={goHome} aria-label="ホームへ">🏠</button>
-      <div class="title-small">「{activeReading}」</div>
+      <div class="title-small">「{activeSet.name}」</div>
       <button class="btn btn--icon settings-btn" onclick={() => (showSettings = true)} aria-label="設定">⚙</button>
     </div>
 
@@ -288,6 +293,23 @@
         {/each}
       </div>
     </div>
+
+    {#if showPraiseAnim}
+      <div class="praise-bg-anim" aria-hidden="true">
+        <!-- 花火（12 個・遅延ばらけ） -->
+        {#each Array(12) as _, i (i)}
+          <span class="firework" style="left:{(i * 137) % 95}vw; top:{15 + (i * 53) % 55}vh; animation-delay:{(i * 0.18) % 1.5}s;">🎆</span>
+        {/each}
+        <!-- 踊る動物（画面下に並ぶ） -->
+        {#each ['🐶','🐱','🐰','🐻','🦁','🐼','🐯','🦊'] as a, i (a)}
+          <span class="dancer" style="left:{8 + i * 11}%; animation-delay:{i * 0.08}s;">{a}</span>
+        {/each}
+        <!-- 紙吹雪（24 個・天井から落下） -->
+        {#each Array(24) as _, i (i)}
+          <span class="confetti-piece" style="left:{(i * 71) % 100}vw; animation-delay:{(i * 0.05) % 0.6}s; color:hsl({(i * 47) % 360}, 90%, 60%);">✨</span>
+        {/each}
+      </div>
+    {/if}
 
     {#if showPraise}
       <div class="praise-overlay" role="dialog" aria-modal="true">
@@ -605,6 +627,50 @@
     18%  { transform: scale(1.35); opacity: 1; }
     80%  { transform: scale(1.0); opacity: 1; }
     100% { transform: scale(1.0); opacity: 1; } /* 終端で消えない・次の値に上書きされて再生 */
+  }
+
+  /* === Session 267 v4: 全画面お祝いアニメ === */
+  .praise-bg-anim {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 19;
+    overflow: hidden;
+  }
+  .firework {
+    position: absolute;
+    font-size: clamp(2.5rem, 7vw, 4rem);
+    transform: scale(0);
+    opacity: 0;
+    animation: firework-pop 1.4s ease-out infinite;
+    filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.8));
+  }
+  @keyframes firework-pop {
+    0%   { transform: scale(0.2) rotate(0deg);   opacity: 0; }
+    20%  { transform: scale(1.6) rotate(45deg);  opacity: 1; }
+    60%  { transform: scale(2.2) rotate(180deg); opacity: 0.8; }
+    100% { transform: scale(2.8) rotate(360deg); opacity: 0; }
+  }
+  .dancer {
+    position: absolute;
+    bottom: 3%;
+    font-size: clamp(2.5rem, 9vw, 4.5rem);
+    animation: dance 0.55s ease-in-out infinite alternate;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.25));
+  }
+  @keyframes dance {
+    0%   { transform: translateY(0)     rotate(-15deg) scale(1); }
+    100% { transform: translateY(-40px) rotate(15deg)  scale(1.18); }
+  }
+  .confetti-piece {
+    position: absolute;
+    top: -3rem;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    animation: confetti-fall 2.6s linear infinite;
+  }
+  @keyframes confetti-fall {
+    0%   { transform: translateY(0)     rotate(0deg);   opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0.3; }
   }
 
   /* === 評価オーバーレイ === */

@@ -175,24 +175,22 @@
     position: relative;
     z-index: 2;
     margin: 0;
-    font-size: clamp(2.4rem, 8vw, 4.5rem);
+    margin-top: 18vh; /* 中央 60% 位置 */
+    font-size: clamp(2.4rem, 8.5vw, 4.5rem);
     font-weight: 900;
-    color: #2a4d6b;
+    color: #b91c1c;
     letter-spacing: 0.08em;
     text-align: center;
+    -webkit-text-stroke: 3px #ffffff;
+    paint-order: stroke fill;
     text-shadow:
-      0 3px 0 rgba(255, 255, 255, 0.8),
-      0 6px 20px rgba(0, 0, 0, 0.15);
-    background: linear-gradient(180deg, #fde047, #fbbf24);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+      0 4px 0 #c2750c,
+      0 8px 0 rgba(146, 64, 14, 0.55),
+      0 14px 30px rgba(0, 0, 0, 0.3);
     /* 初期位置 = 画面外上 */
     transform: translateY(-150vh) rotate(-12deg);
     opacity: 0;
     transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease-out;
-    /* 中央 60% 位置（top 30vh 周辺）に絶対配置 */
-    margin-top: 18vh;
   }
   .app-title.visible {
     transform: translateY(0) rotate(0deg);

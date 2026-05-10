@@ -278,7 +278,7 @@
             <div class="frame-action frame-action-top">
               {#if !startedFlags[i]}
                 <button
-                  class="btn btn--primary frame-btn"
+                  class="btn btn--primary frame-btn frame-btn--pulse"
                   onclick={() => startKanji(i)}
                 >▶ スタート</button>
               {:else}
@@ -603,6 +603,24 @@
     opacity: 0.5;
     cursor: default;
     filter: brightness(0.97);
+  }
+  .frame-action :global(.frame-btn--pulse) {
+    animation: frame-start-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes frame-start-pulse {
+    0%, 100% {
+      transform: scale(1);
+      filter: brightness(1) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+    }
+    50% {
+      transform: scale(1.08);
+      filter: brightness(1.08) drop-shadow(0 4px 10px rgba(255, 165, 0, 0.55));
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .frame-action :global(.frame-btn--pulse) {
+      animation: none;
+    }
   }
 
   /* Session 267 R1+R2: スマホ縦配置（PC・タブレット 横配置を維持） */

@@ -419,6 +419,7 @@
             style="--x:{fw.x}vw; --launch-y:{fw.launchY}vh; --peak-y:{fw.peakY}vh; --launch-dur:{fw.launchDur}s; --burst-delay:{fw.launchDur + 0.3}s; --hue:{fw.hue}; --radius:{fw.radius}vmin;"
           >
             <span class="fw-rocket fw-size-{fw.size}"></span>
+            <span class="fw-flash fw-size-{fw.size}"></span>
             {#each fw.particles as p, j (j)}
               <span
                 class="fw-particle fw-{fw.pattern} fw-size-{fw.size}"
@@ -801,20 +802,45 @@
     position: absolute;
     top: var(--launch-y);
     left: 0;
-    width: 6px;
-    height: 6px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
-    background: hsl(var(--hue), 90%, 78%);
+    background: hsl(var(--hue), 90%, 80%);
     box-shadow:
-      0 0 14px hsl(var(--hue), 95%, 78%),
-      0 0 28px hsl(var(--hue), 95%, 60%),
-      0 0 4px white;
+      0 0 22px hsl(var(--hue), 95%, 78%),
+      0 0 44px hsl(var(--hue), 95%, 60%),
+      0 0 8px white;
     transform: translate(-50%, 0);
     opacity: 0;
     animation: fw-launch var(--launch-dur) cubic-bezier(0.45, 0.1, 0.55, 1) forwards;
   }
-  .fw-rocket.fw-size-s { width: 4px; height: 4px; }
-  .fw-rocket.fw-size-l { width: 8px; height: 8px; }
+  .fw-rocket.fw-size-s { width: 7px; height: 7px; }
+  .fw-rocket.fw-size-l { width: 13px; height: 13px; }
+  /* 炸裂瞬間の白フラッシュ（球が爆発した直後の閃光） */
+  .fw-flash {
+    position: absolute;
+    top: var(--peak-y);
+    left: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    box-shadow:
+      0 0 30px white,
+      0 0 60px hsl(var(--hue), 95%, 75%),
+      0 0 100px hsl(var(--hue), 95%, 60%);
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    animation: fw-flash-burst 0.45s ease-out forwards;
+    animation-delay: var(--burst-delay);
+  }
+  .fw-flash.fw-size-s { width: 12px; height: 12px; }
+  .fw-flash.fw-size-l { width: 22px; height: 22px; }
+  @keyframes fw-flash-burst {
+    0%   { transform: translate(-50%, -50%) scale(0);   opacity: 0; }
+    20%  { transform: translate(-50%, -50%) scale(2.4); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(4.5); opacity: 0; }
+  }
   @keyframes fw-launch {
     0%   { top: var(--launch-y); opacity: 0; transform: translate(-50%, 0) scale(0.5); }
     8%   { opacity: 1; transform: translate(-50%, 0) scale(1.05); }
@@ -825,29 +851,30 @@
     position: absolute;
     top: var(--peak-y);
     left: 0;
-    width: 6px;
-    height: 6px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    background: hsl(calc(var(--hue) + var(--idx) * 6), 95%, 68%);
+    background: hsl(calc(var(--hue) + var(--idx) * 6), 95%, 62%);
     box-shadow:
-      0 0 8px hsl(calc(var(--hue) + var(--idx) * 6), 95%, 72%),
-      0 0 16px hsl(var(--hue), 95%, 60%);
+      0 0 14px hsl(calc(var(--hue) + var(--idx) * 6), 95%, 70%),
+      0 0 28px hsl(var(--hue), 95%, 55%),
+      0 0 6px white;
     transform: translate(-50%, -50%) scale(0);
     opacity: 0;
     animation: fw-particle-fly 1.5s cubic-bezier(0.15, 0.75, 0.4, 1) forwards;
     animation-delay: var(--burst-delay);
   }
-  .fw-particle.fw-size-s { width: 4px; height: 4px; }
-  .fw-particle.fw-size-l { width: 8px; height: 8px; }
+  .fw-particle.fw-size-s { width: 7px; height: 7px; }
+  .fw-particle.fw-size-l { width: 14px; height: 14px; }
   /* パルムは粒子を一回り大きく（太い枝感） */
-  .fw-particle.fw-palm { width: 8px; height: 8px; }
-  .fw-particle.fw-palm.fw-size-s { width: 6px; height: 6px; }
-  .fw-particle.fw-palm.fw-size-l { width: 11px; height: 11px; }
+  .fw-particle.fw-palm { width: 13px; height: 13px; }
+  .fw-particle.fw-palm.fw-size-s { width: 10px; height: 10px; }
+  .fw-particle.fw-palm.fw-size-l { width: 18px; height: 18px; }
   @keyframes fw-particle-fly {
     0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
-    8%   { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
-    60%  { transform: translate(calc(-50% + var(--dx) * var(--radius)), calc(-50% + var(--dy) * var(--radius))) scale(0.85); opacity: 1; }
-    100% { transform: translate(calc(-50% + var(--dx) * var(--radius) * 1.05), calc(-50% + var(--dy) * var(--radius) * 1.05)) scale(0.15); opacity: 0; }
+    8%   { transform: translate(-50%, -50%) scale(1.8); opacity: 1; }
+    60%  { transform: translate(calc(-50% + var(--dx) * var(--radius)), calc(-50% + var(--dy) * var(--radius))) scale(1.0); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx) * var(--radius) * 1.05), calc(-50% + var(--dy) * var(--radius) * 1.05)) scale(0.2); opacity: 0; }
   }
   .fw-particle.fw-gravity {
     animation-name: fw-particle-fall;
@@ -855,9 +882,9 @@
   }
   @keyframes fw-particle-fall {
     0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
-    8%   { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
-    35%  { transform: translate(calc(-50% + var(--dx) * var(--radius)), calc(-50% + var(--dy) * var(--radius))) scale(0.95); opacity: 1; }
-    100% { transform: translate(calc(-50% + var(--dx) * var(--radius) * 1.1), calc(-50% + var(--dy) * var(--radius) + 28vmin)) scale(0.35); opacity: 0; }
+    8%   { transform: translate(-50%, -50%) scale(1.8); opacity: 1; }
+    35%  { transform: translate(calc(-50% + var(--dx) * var(--radius)), calc(-50% + var(--dy) * var(--radius))) scale(1.1); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx) * var(--radius) * 1.1), calc(-50% + var(--dy) * var(--radius) + 28vmin)) scale(0.4); opacity: 0; }
   }
   @media (prefers-reduced-motion: reduce) {
     .fw-shell { display: none; }

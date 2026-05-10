@@ -87,10 +87,13 @@
   function spawnFirework() {
     const patterns = ['kiku', 'botan', 'yanagi', 'heart', 'palm'];
     const sizes = ['s', 'm', 'l'];
-    const sizeRadius = { s: 11, m: 16, l: 22 };
+    const sizeRadius = { s: 13, m: 18, l: 24 };
     const sizeCount = { s: 16, m: 22, l: 30 };
+    // 黄色背景 (~50°) を避ける差色パレット：赤・ピンク・紫・青・水色・緑・橙
+    const huePalette = [350, 320, 285, 240, 210, 180, 140, 25];
     const pattern = patterns[Math.floor(Math.random() * patterns.length)];
     const size = sizes[Math.floor(Math.random() * sizes.length)];
+    const baseHue = huePalette[Math.floor(Math.random() * huePalette.length)];
     const id = ++fwSeq;
     const launchDur = 0.55 + Math.random() * 0.25;
     const fw = {
@@ -100,7 +103,7 @@
       launchY: 92,
       pattern,
       size,
-      hue: Math.floor(Math.random() * 360),
+      hue: (baseHue + Math.floor(Math.random() * 20) - 10 + 360) % 360,
       launchDur,
       radius: sizeRadius[size],
       particles: patternParticles(pattern, sizeCount[size]),
@@ -270,7 +273,7 @@
       showPraise = true;
       // Session 267 v4: 全画面お祝いアニメを 3 秒間発火
       showPraiseAnim = true;
-      setTimeout(() => { showPraiseAnim = false; }, 3000);
+      setTimeout(() => { showPraiseAnim = false; }, 5000);
     } else {
       animationStarted = false;
     }
@@ -802,44 +805,44 @@
     position: absolute;
     top: var(--launch-y);
     left: 0;
-    width: 9px;
-    height: 9px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
-    background: hsl(var(--hue), 90%, 80%);
+    background: hsl(var(--hue), 90%, 82%);
     box-shadow:
-      0 0 22px hsl(var(--hue), 95%, 78%),
-      0 0 44px hsl(var(--hue), 95%, 60%),
-      0 0 8px white;
+      0 0 32px hsl(var(--hue), 95%, 78%),
+      0 0 60px hsl(var(--hue), 95%, 60%),
+      0 0 12px white;
     transform: translate(-50%, 0);
     opacity: 0;
     animation: fw-launch var(--launch-dur) cubic-bezier(0.45, 0.1, 0.55, 1) forwards;
   }
-  .fw-rocket.fw-size-s { width: 7px; height: 7px; }
-  .fw-rocket.fw-size-l { width: 13px; height: 13px; }
+  .fw-rocket.fw-size-s { width: 11px; height: 11px; }
+  .fw-rocket.fw-size-l { width: 19px; height: 19px; }
   /* 炸裂瞬間の白フラッシュ（球が爆発した直後の閃光） */
   .fw-flash {
     position: absolute;
     top: var(--peak-y);
     left: 0;
-    width: 16px;
-    height: 16px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     background: white;
     box-shadow:
-      0 0 30px white,
-      0 0 60px hsl(var(--hue), 95%, 75%),
-      0 0 100px hsl(var(--hue), 95%, 60%);
+      0 0 50px white,
+      0 0 100px hsl(var(--hue), 95%, 75%),
+      0 0 180px hsl(var(--hue), 95%, 60%);
     transform: translate(-50%, -50%) scale(0);
     opacity: 0;
-    animation: fw-flash-burst 0.45s ease-out forwards;
+    animation: fw-flash-burst 0.55s ease-out forwards;
     animation-delay: var(--burst-delay);
   }
-  .fw-flash.fw-size-s { width: 12px; height: 12px; }
-  .fw-flash.fw-size-l { width: 22px; height: 22px; }
+  .fw-flash.fw-size-s { width: 20px; height: 20px; }
+  .fw-flash.fw-size-l { width: 36px; height: 36px; }
   @keyframes fw-flash-burst {
     0%   { transform: translate(-50%, -50%) scale(0);   opacity: 0; }
-    20%  { transform: translate(-50%, -50%) scale(2.4); opacity: 1; }
-    100% { transform: translate(-50%, -50%) scale(4.5); opacity: 0; }
+    20%  { transform: translate(-50%, -50%) scale(3.2); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(6);   opacity: 0; }
   }
   @keyframes fw-launch {
     0%   { top: var(--launch-y); opacity: 0; transform: translate(-50%, 0) scale(0.5); }
@@ -851,25 +854,25 @@
     position: absolute;
     top: var(--peak-y);
     left: 0;
-    width: 10px;
-    height: 10px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: hsl(calc(var(--hue) + var(--idx) * 6), 95%, 62%);
+    background: hsl(calc(var(--hue) + var(--idx) * 6), 95%, 60%);
     box-shadow:
-      0 0 14px hsl(calc(var(--hue) + var(--idx) * 6), 95%, 70%),
-      0 0 28px hsl(var(--hue), 95%, 55%),
-      0 0 6px white;
+      0 0 22px hsl(calc(var(--hue) + var(--idx) * 6), 95%, 70%),
+      0 0 44px hsl(var(--hue), 95%, 55%),
+      0 0 12px white;
     transform: translate(-50%, -50%) scale(0);
     opacity: 0;
-    animation: fw-particle-fly 1.5s cubic-bezier(0.15, 0.75, 0.4, 1) forwards;
+    animation: fw-particle-fly 1.6s cubic-bezier(0.15, 0.75, 0.4, 1) forwards;
     animation-delay: var(--burst-delay);
   }
-  .fw-particle.fw-size-s { width: 7px; height: 7px; }
-  .fw-particle.fw-size-l { width: 14px; height: 14px; }
+  .fw-particle.fw-size-s { width: 12px; height: 12px; }
+  .fw-particle.fw-size-l { width: 21px; height: 21px; }
   /* パルムは粒子を一回り大きく（太い枝感） */
-  .fw-particle.fw-palm { width: 13px; height: 13px; }
-  .fw-particle.fw-palm.fw-size-s { width: 10px; height: 10px; }
-  .fw-particle.fw-palm.fw-size-l { width: 18px; height: 18px; }
+  .fw-particle.fw-palm { width: 20px; height: 20px; }
+  .fw-particle.fw-palm.fw-size-s { width: 15px; height: 15px; }
+  .fw-particle.fw-palm.fw-size-l { width: 27px; height: 27px; }
   @keyframes fw-particle-fly {
     0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
     8%   { transform: translate(-50%, -50%) scale(1.8); opacity: 1; }

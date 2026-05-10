@@ -1,6 +1,7 @@
 <script>
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { base } from '$app/paths';
   import TraceCanvas from '$lib/components/TraceCanvas.svelte';
   import AssetSettings from '$lib/components/AssetSettings.svelte';
   import { getSetById, SET_ORDER } from '$lib/data/sets.js';
@@ -276,11 +277,11 @@
           <div class="praise-actions">
             <button class="btn btn--primary big" onclick={retry}>もういっかい</button>
             {#if nextSetId}
-              <button class="btn btn--primary big next-btn" onclick={() => goto(`/play?set=${nextSetId}`)}>
+              <button class="btn btn--primary big next-btn" onclick={() => goto(`${base}/play?set=${nextSetId}`)}>
                 つぎへ →
               </button>
             {:else}
-              <button class="btn btn--secondary big" onclick={() => goto('/')}>
+              <button class="btn btn--secondary big" onclick={() => goto(`${base}/`)}>
                 ホームへ
               </button>
             {/if}

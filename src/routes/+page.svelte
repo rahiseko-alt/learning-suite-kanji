@@ -1,9 +1,10 @@
 <script>
   import { goto } from '$app/navigation';
+  import { base } from '$app/paths';
   import { SETS, SET_ORDER } from '$lib/data/sets.js';
 
   function pickSet(setId) {
-    goto(`/play?set=${setId}`);
+    goto(`${base}/play?set=${setId}`);
   }
 </script>
 

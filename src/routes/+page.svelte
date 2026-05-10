@@ -266,6 +266,12 @@
     width: max-content;
     animation: scroll-belt linear infinite;
   }
+  /* Session 267 v5: hover / focus / active 時に自動スクロールを一時停止して押しやすく */
+  .card-belt:hover,
+  .card-belt:focus-within,
+  .card-belt:active {
+    animation-play-state: paused;
+  }
   @keyframes scroll-belt {
     0%   { transform: translateX(0); }
     100% { transform: translateX(-33.3333%); }

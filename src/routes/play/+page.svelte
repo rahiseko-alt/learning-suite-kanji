@@ -289,7 +289,7 @@
               {/if}
             </div>
 
-            <div class="canvas-host">
+            <div class="canvas-host" class:locked={!startedFlags[i]} aria-disabled={!startedFlags[i]}>
               <div class="reading-badge" aria-hidden="true">{k.reading ?? ''}</div>
               <TraceCanvas
                 bind:this={traceComps[i]}
@@ -588,6 +588,11 @@
   .canvas-host {
     position: relative;
     width: 100%;
+  }
+  /* スタート押下前は記入を受け付けない（誤記入防止・見た目は維持） */
+  .canvas-host.locked {
+    pointer-events: none;
+    touch-action: none;
   }
   .frame-action {
     display: flex;

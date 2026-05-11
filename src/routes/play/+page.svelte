@@ -5,7 +5,7 @@
   import { untrack } from 'svelte';
   import TraceCanvas from '$lib/components/TraceCanvas.svelte';
   import AssetSettings from '$lib/components/AssetSettings.svelte';
-  import { SETS, SET_ORDER, getSetById } from '$lib/data/sets.js';
+  import { SETS, getSetById } from '$lib/data/sets.js';
 
   // Session 267 v5: 複数 sets= 対応（カンマ区切り）/ 単数 ?set= 互換も維持
   let rawSetIds = $derived(
@@ -15,23 +15,22 @@
       .filter(Boolean)
   );
   let activeSets = $derived(rawSetIds.map((id) => SETS[id]).filter(Boolean));
-  let activeSet = $derived(activeSets[0] ?? getSetById('fei'));
-  // 複数 set の全 kanji を結合（順次練習）
-  let kanjis = $derived(activeSets.flatMap((s) => s.kanji));
-  // お題のひらがな（各 kanji の reading 結合）
+  // Session 273: 1 セット = 1 ステージ。複数選択時はセット毎にステージを進める
+  let stageIndex = $state(0);
+  let activeSet = $derived(activeSets[stageIndex] ?? activeSets[0] ?? getSetById('fei'));
+  let kanjis = $derived(activeSet.kanji);
+  // お題のひらがな（現ステージ内の kanji reading を結合）
   let activeReading = $derived(kanjis.map((k) => k.reading || '').join(''));
-  // 表示用セット名（複数なら「井 / 飛 / 愛知県」スラッシュ区切り）
-  let activeSetNames = $derived(activeSets.map((s) => s.name).join(' / '));
+  // 表示用セット名（現ステージのみ）
+  let activeSetNames = $derived(activeSet.name);
+  // 次ステージの有無（praise overlay の動線分岐）
+  let hasNextStage = $derived(stageIndex < activeSets.length - 1);
 
   function goHome() {
     goto(`${base}/`);
   }
   let currentIndex = $state(0);
   let activeKanji = $derived(kanjis[currentIndex] ?? kanjis[0]);
-  // 次のセット動線（最後のセットの SET_ORDER 次）
-  let nextSetId = $derived(
-    SET_ORDER[SET_ORDER.indexOf(rawSetIds[rawSetIds.length - 1]) + 1] ?? null
-  );
 
   let phase = $state('start');
   let traceComps = $state([]);
@@ -152,10 +151,11 @@
     completedFlags = Array(len).fill(false);
   });
 
-  // sets 変化時に currentIndex リセット（セット切替時の状態クリア）
+  // sets 変化時に currentIndex / stageIndex リセット（セット切替時の状態クリア）
   $effect(() => {
     rawSetIds.join(','); // 依存追跡
     currentIndex = 0;
+    stageIndex = 0;
     showPraise = false;
     animationStarted = false;
     phase = 'start';
@@ -173,14 +173,12 @@
   // ユーザーカスタマイズ可能アセット
   let assets = $state({
     character: null, // null = デフォルト🐱 / DataURL = アップロード画像
-    background: null,
     emoji: null,
     icon: null // Session 267 v4: ホーム画面アイコン（user upload 時 apple-touch-icon を JS で差替）
   });
-  // Session 267 v3: 各画像の位置/拡大縮小調整（character/emoji = transform translate+scale 用、background = background-position/size 用）
+  // Session 267 v3: 各画像の位置/拡大縮小調整（character/emoji = transform translate+scale 用）
   let adjustments = $state({
     character: { x: 0, y: 0, scale: 1 },
-    background: { x: 50, y: 50, scale: 1 }, // background-position 単位 % / size は scale*100%
     emoji: { x: 0, y: 0, scale: 1 },
     icon: { x: 0, y: 0, scale: 1 }
   });
@@ -195,13 +193,12 @@
       if (saved) {
         const data = JSON.parse(saved);
         if (data.character) assets.character = data.character;
-        if (data.background) assets.background = data.background;
         if (data.emoji) assets.emoji = data.emoji;
       }
       const savedAdj = localStorage.getItem(ADJ_KEY);
       if (savedAdj) {
         const data = JSON.parse(savedAdj);
-        for (const key of ['character', 'background', 'emoji']) {
+        for (const key of ['character', 'emoji']) {
           if (data[key]) Object.assign(adjustments[key], data[key]);
         }
       }
@@ -230,9 +227,32 @@
     phase = 'practice';
     animationStarted = false;
     showPraise = false;
+    stageIndex = 0;
     currentIndex = 0;
     startedFlags = Array(kanjis.length).fill(false);
     completedFlags = Array(kanjis.length).fill(false);
+  }
+
+  // Session 273: 次ステージへ進む（複数選択時のセット間遷移）
+  function nextStage() {
+    if (!hasNextStage) return;
+    showPraise = false;
+    showPraiseAnim = false;
+    animationStarted = false;
+    currentIndex = 0;
+    traceComps.forEach((t) => t?.clearAll?.());
+    stageIndex = stageIndex + 1;
+    // kanjis 変化に追従して startedFlags / completedFlags は $effect で再初期化される
+  }
+
+  // Session 273: 最終ステージ完了後の「もういっかい」= 全選択を最初のステージから
+  function restartAll() {
+    showPraise = false;
+    showPraiseAnim = false;
+    animationStarted = false;
+    currentIndex = 0;
+    traceComps.forEach((t) => t?.clearAll?.());
+    stageIndex = 0;
   }
 
   async function runCountdownThen(action) {
@@ -313,23 +333,16 @@
   <title>「{activeSet.name}」をかこう</title>
 </svelte:head>
 
-<main
-  class="page"
-  style:background-image={assets.background ? `url("${assets.background}")` : null}
-  style:background-position={assets.background ? `${adjustments.background.x}% ${adjustments.background.y}%` : null}
-  style:background-size={assets.background ? `${Math.round(adjustments.background.scale * 100)}% auto` : null}
->
-  <!-- 背景装飾（デフォルト時のみ表示・子供向けポップアート風の雲） -->
-  {#if !assets.background}
-    <div class="bg-decor" aria-hidden="true">
-      <span class="cloud cloud-1">☁</span>
-      <span class="cloud cloud-2">☁</span>
-      <span class="cloud cloud-3">☁</span>
-      <span class="star star-1">⭐</span>
-      <span class="star star-2">✨</span>
-      <span class="star star-3">🌟</span>
-    </div>
-  {/if}
+<main class="page">
+  <!-- 背景装飾（子供向けポップアート風の雲） -->
+  <div class="bg-decor" aria-hidden="true">
+    <span class="cloud cloud-1">☁</span>
+    <span class="cloud cloud-2">☁</span>
+    <span class="cloud cloud-3">☁</span>
+    <span class="star star-1">⭐</span>
+    <span class="star star-2">✨</span>
+    <span class="star star-3">🌟</span>
+  </div>
 
   <!-- 設定ボタン（start phase のみ左上・practice phase では topbar 内に配置） -->
   {#if phase === 'start'}
@@ -472,15 +485,12 @@
           <h2>やったね！！</h2>
           <p>{kanjis.length > 1 ? `「${activeSetNames}」ぜんぶかけたね！` : 'かんぺきにかけたね！'}</p>
           <div class="praise-actions">
-            <button class="btn btn--primary big" onclick={retry}>もういっかい</button>
-            {#if nextSetId}
-              <button class="btn btn--primary big next-btn" onclick={() => goto(`${base}/play?sets=${nextSetId}`)}>
-                つぎへ →
-              </button>
+            {#if hasNextStage}
+              <button class="btn btn--primary big next-btn" onclick={nextStage}>つぎへ →</button>
+              <button class="btn btn--secondary big" onclick={retry}>もういっかい</button>
             {:else}
-              <button class="btn btn--secondary big" onclick={() => goto(`${base}/`)}>
-                ホームへ
-              </button>
+              <button class="btn btn--primary big" onclick={restartAll}>もういっかい</button>
+              <button class="btn btn--secondary big" onclick={() => goto(`${base}/`)}>ホームへ</button>
             {/if}
           </div>
         </div>
@@ -628,9 +638,13 @@
     justify-content: space-between;
     gap: 0.5rem;
   }
+  /* Session 273: 親 flex/scroll コンテキストに依存しない fixed 固定に変更
+     → スクロール時も常に画面最上部に張り付く */
   .topbar-sticky {
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 50%;
+    transform: translateX(-50%);
     background: rgba(254, 243, 199, 0.92);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
@@ -669,6 +683,7 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
   /* Session 266: 複数文字横並び対応 — 単漢字は max-width 480px、複数は 800px に拡張 */
+  /* Session 273: topbar fixed 化に伴い上方向スペース確保（topbar 高 ≒ 4.25rem） */
   .play-area {
     position: relative;
     z-index: 1;
@@ -676,6 +691,7 @@
     max-width: 480px;
     display: flex;
     justify-content: center;
+    margin-top: 4.5rem;
   }
   .play-area.multi {
     max-width: 900px;

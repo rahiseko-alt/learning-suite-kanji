@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
   import { SETS, SET_ORDER } from '$lib/data/sets.js';
+  import AssetSettings from '$lib/components/AssetSettings.svelte';
   import { onMount } from 'svelte';
 
   // Session 267 v5: トップページ全面リニューアル
@@ -11,12 +12,72 @@
   // 4. カードタップで複数選択トグル + 揺れアニメ
   // 5. 左右矢印で手動フリック（一時的にスピード倍率変更）
   // 6. 1 つ以上選択で確定ボタン表示 → /play?sets= に遷移
+  // Session 273: 設定ボタン追加（play 画面と同じ AssetSettings モーダル・localStorage 共有）
 
   let titleVisible = $state(false);
   let buttonVisible = $state(false);
   let cardSliderVisible = $state(false);
   let selectedIds = $state([]);
   let scrollSpeed = $state(1); // 1 = 通常 / 5 = 矢印フリック時
+  let showSettings = $state(false);
+
+  // ユーザーカスタマイズ可能アセット（play 画面と同一 STORAGE_KEY で共有）
+  let assets = $state({
+    character: null,
+    emoji: null,
+    icon: null
+  });
+  let adjustments = $state({
+    character: { x: 0, y: 0, scale: 1 },
+    emoji: { x: 0, y: 0, scale: 1 },
+    icon: { x: 0, y: 0, scale: 1 }
+  });
+
+  const STORAGE_KEY = 'learning-suite:kanji:assets';
+  const ADJ_KEY = 'learning-suite:kanji:adjustments';
+
+  $effect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data.character) assets.character = data.character;
+        if (data.emoji) assets.emoji = data.emoji;
+        if (data.icon) assets.icon = data.icon;
+      }
+      const savedAdj = localStorage.getItem(ADJ_KEY);
+      if (savedAdj) {
+        const data = JSON.parse(savedAdj);
+        for (const key of ['character', 'emoji']) {
+          if (data[key]) Object.assign(adjustments[key], data[key]);
+        }
+      }
+    } catch (e) {}
+  });
+
+  // user upload icon があれば apple-touch-icon を動的に差し替え（play 画面と同様）
+  $effect(() => {
+    if (typeof document === 'undefined') return;
+    const link = document.getElementById('apple-touch-icon');
+    if (!link) return;
+    if (assets.icon) {
+      link.href = assets.icon;
+    }
+  });
+
+  function saveAssets() {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(assets));
+      localStorage.setItem(ADJ_KEY, JSON.stringify(adjustments));
+    } catch (e) {}
+  }
+
+  function closeSettings() {
+    saveAssets();
+    showSettings = false;
+  }
 
   // SET_ORDER を 3 重ループ化（無限スクロールの錯視のため）
   const beltItems = [...SET_ORDER, ...SET_ORDER, ...SET_ORDER];
@@ -61,6 +122,13 @@
 </svelte:head>
 
 <main class="page">
+  <!-- 設定ボタン（左上・play 画面と同位置） -->
+  <button
+    class="btn btn--icon settings-pos"
+    onclick={() => (showSettings = true)}
+    aria-label="設定"
+  >⚙</button>
+
   <!-- 背景装飾 -->
   <div class="bg-decor" aria-hidden="true">
     <span class="cloud cloud-1">☁</span>
@@ -122,6 +190,10 @@
         ✨ えらんだ {selectedIds.length} つで あそぶ
       </button>
     {/if}
+  {/if}
+
+  {#if showSettings}
+    <AssetSettings bind:assets bind:adjustments onclose={closeSettings} />
   {/if}
 </main>
 
@@ -395,5 +467,36 @@
       inset 0 -2px 0 rgba(146, 64, 14, 0.18),
       0 2px 0 #c2750c,
       0 3px 6px rgba(194, 117, 12, 0.2);
+  }
+  /* icon（円形・小型立体）— play 画面と同一定義 */
+  :global(.btn--icon) {
+    width: 3.25rem;
+    height: 3.25rem;
+    padding: 0;
+    border-radius: 999px;
+    font-size: 1.5rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    color: #475569;
+    box-shadow:
+      inset 0 -2px 0 rgba(100, 116, 139, 0.12),
+      0 3px 0 #94a3b8,
+      0 4px 8px rgba(100, 116, 139, 0.18);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  :global(.btn--icon:active) {
+    transform: translateY(2px);
+    box-shadow:
+      inset 0 -1px 0 rgba(100, 116, 139, 0.12),
+      0 1px 0 #94a3b8,
+      0 2px 4px rgba(100, 116, 139, 0.15);
+  }
+  /* 設定ボタンの位置（左上） */
+  .settings-pos {
+    position: absolute;
+    top: 0.7rem;
+    left: 0.7rem;
+    z-index: 4;
   }
 </style>

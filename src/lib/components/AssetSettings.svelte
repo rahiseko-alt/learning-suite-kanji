@@ -4,17 +4,12 @@
   let { assets = $bindable(), adjustments = $bindable(), onclose } = $props();
 
   // Session 267 v3: 各 slot に位置・拡大縮小スライダー追加
-  // background は background-position 用に 0-100% 範囲、character/emoji は transform translate 用に -50〜50%
+  // character/emoji は transform translate 用に -50〜50%
   const SLOTS = [
     {
       key: 'character', label: 'キャラクター', icon: '🐱', hint: '応援してくれるよ',
       xMin: -50, xMax: 50, yMin: -50, yMax: 50,
       defaults: { x: 0, y: 0, scale: 1 }
-    },
-    {
-      key: 'background', label: 'はいけい', icon: '🌈', hint: 'お部屋のかべがみ',
-      xMin: 0, xMax: 100, yMin: 0, yMax: 100,
-      defaults: { x: 50, y: 50, scale: 1 }
     },
     {
       key: 'emoji', label: 'えもじ', icon: '🎉', hint: 'できたときの おいわい',
@@ -80,10 +75,7 @@
               <img
                 src={assets[slot.key]}
                 alt={slot.label}
-                style:transform={slot.key === 'background' ? null : `translate(${adjustments[slot.key].x}%, ${adjustments[slot.key].y}%) scale(${adjustments[slot.key].scale})`}
-                style:object-position={slot.key === 'background' ? `${adjustments[slot.key].x}% ${adjustments[slot.key].y}%` : null}
-                style:width={slot.key === 'background' ? `${Math.round(adjustments[slot.key].scale * 100)}%` : null}
-                style:height={slot.key === 'background' ? `${Math.round(adjustments[slot.key].scale * 100)}%` : null}
+                style:transform={`translate(${adjustments[slot.key].x}%, ${adjustments[slot.key].y}%) scale(${adjustments[slot.key].scale})`}
               />
             {:else}
               <div class="default-icon">{slot.icon}</div>

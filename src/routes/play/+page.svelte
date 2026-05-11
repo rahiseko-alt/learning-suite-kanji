@@ -19,8 +19,8 @@
   let stageIndex = $state(0);
   let activeSet = $derived(activeSets[stageIndex] ?? activeSets[0] ?? getSetById('fei'));
   let kanjis = $derived(activeSet.kanji);
-  // お題のひらがな（現ステージ内の kanji reading を結合）
-  let activeReading = $derived(kanjis.map((k) => k.reading || '').join(''));
+  // お題のひらがな（Session 273: セット熟語の正しい読みを優先 / 単漢字セットは個別 reading の結合）
+  let activeReading = $derived(activeSet.reading ?? kanjis.map((k) => k.reading || '').join(''));
   // 表示用セット名（現ステージのみ）
   let activeSetNames = $derived(activeSet.name);
   // 次ステージの有無（praise overlay の動線分岐）
@@ -404,7 +404,7 @@
             </div>
 
             <div class="canvas-host" class:locked={!startedFlags[i] || completedFlags[i]} aria-disabled={!startedFlags[i] || completedFlags[i]}>
-              <div class="reading-badge" aria-hidden="true">{k.reading ?? ''}</div>
+              <div class="reading-badge" aria-hidden="true">{activeSet.kanjiReadings?.[i] ?? k.reading ?? ''}</div>
               <TraceCanvas
                 bind:this={traceComps[i]}
                 kanji={k}

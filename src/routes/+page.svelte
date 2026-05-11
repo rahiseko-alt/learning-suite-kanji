@@ -141,7 +141,16 @@
     <span class="planet planet-2">🌙</span>
   </div>
 
-  <!-- タイトル：画面外（上）から中央 60% 位置へ降下 -->
+  <!-- マスコット（Session 273: 王道シンプル路線・タイトル上方に拡大配置） -->
+  <div class="title-mascot" class:visible={titleVisible} aria-hidden="true">
+    {#if assets.character}
+      <img src={assets.character} alt="" />
+    {:else}
+      🐱
+    {/if}
+  </div>
+
+  <!-- タイトル：画面外（上）から中央位置へ降下 -->
   <h1 class="app-title" class:visible={titleVisible}>かんじでアソボ！</h1>
 
   <!-- 「あそぶ」ボタン（タイトル降下後 0.5 秒でフェードイン） -->
@@ -242,23 +251,54 @@
     50%      { opacity: 0.8; transform: scale(1.15); }
   }
 
-  /* === タイトル：画面外（上）→ 中央上 60% 位置へ降下 === */
+  /* === マスコット（Session 273: 王道シンプル路線・タイトル上方に拡大） === */
+  .title-mascot {
+    position: relative;
+    z-index: 2;
+    margin-top: 8vh;
+    font-size: clamp(5rem, 22vw, 9rem);
+    line-height: 1;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.18));
+    /* 初期 = 透明・少し小さい */
+    opacity: 0;
+    transform: translateY(20px) scale(0.7);
+    transition:
+      opacity 0.5s ease-out 0.4s,
+      transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s;
+  }
+  .title-mascot.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    animation: mascot-bob 2.4s ease-in-out 1.2s infinite;
+  }
+  .title-mascot img {
+    width: clamp(5rem, 22vw, 9rem);
+    height: clamp(5rem, 22vw, 9rem);
+    object-fit: contain;
+    border-radius: 50%;
+  }
+  @keyframes mascot-bob {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(-12px) scale(1); }
+  }
+
+  /* === タイトル：画面外（上）→ 中央位置へ降下（Session 273 王道シンプル化） === */
   .app-title {
     position: relative;
     z-index: 2;
     margin: 0;
-    margin-top: 18vh; /* 中央 60% 位置 */
+    margin-top: 1.2rem; /* マスコットからの間隔 */
     font-size: clamp(2.4rem, 8.5vw, 4.5rem);
     font-weight: 900;
     color: #b91c1c;
     letter-spacing: 0.08em;
     text-align: center;
-    -webkit-text-stroke: 3px #ffffff;
+    /* 丸ゴシック優先 → 学校で習う字形に近づける */
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Maru Gothic Std", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+    -webkit-text-stroke: 4px #ffffff;
     paint-order: stroke fill;
-    text-shadow:
-      0 4px 0 #c2750c,
-      0 8px 0 rgba(146, 64, 14, 0.55),
-      0 14px 30px rgba(0, 0, 0, 0.3);
+    /* 単一の下方シャドウのみ（多層立体は撤去） */
+    text-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
     /* 初期位置 = 画面外上 */
     transform: translateY(-150vh) rotate(-12deg);
     opacity: 0;

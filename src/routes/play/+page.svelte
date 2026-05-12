@@ -283,6 +283,8 @@
   // Session 267 B1 修正: 配列要素直接代入を spread (.with) に統一して reactivity を確実発火
   //   → completedFlags.every() が done 後に再評価されず praise が出ないバグを解消
   async function startKanji(i) {
+    // iOS/Android: ユーザージェスチャー中に音声を解放（rAF内再生を可能にする）
+    traceComps.forEach((t) => t?.primeAudio?.());
     currentIndex = i;
     startedFlags = Array(kanjis.length).fill(true); // 全枠一括アンロック
     animationStarted = true;

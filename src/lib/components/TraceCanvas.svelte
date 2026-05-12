@@ -226,22 +226,52 @@
   // 動作語 → mp3 ファイル名マップ（static/audio/ 配下）
   const FRAG_TO_FILE = { 'よこ': 'yoko', 'たて': 'tate', 'ノ': 'no' };
 
+  // iOS/Android: rAF内でnew Audio().play()はブロックされるため、
+  // ユーザージェスチャー時点でAudio要素を作成・解放してキャッシュする
+  const _audioCache = {};
+
+  // スタートボタン押下（ユーザージェスチャー）時に親から呼ぶ
+  function primeAudio() {
+    if (typeof window === 'undefined') return;
+    Object.entries(FRAG_TO_FILE).forEach(([, filename]) => {
+      const url = `${base}/audio/${filename}.mp3`;
+      if (!_audioCache[filename]) {
+        _audioCache[filename] = new Audio(url);
+      }
+      const a = _audioCache[filename];
+      a.volume = 0;
+      const p = a.play();
+      if (p) p.catch(() => {}).finally?.(() => { a.pause(); a.currentTime = 0; a.volume = 1.0; });
+    });
+    // speechSynthesis も解放
+    if (typeof speechSynthesis !== 'undefined') {
+      try {
+        const u = new SpeechSynthesisUtterance('');
+        u.volume = 0;
+        speechSynthesis.speak(u);
+        setTimeout(() => speechSynthesis.cancel(), 50);
+      } catch {}
+    }
+  }
+
   function speakFragment(idx) {
     if (typeof window === 'undefined') return;
     const fragment = kanji.strokes[idx].songFragment;
     const filename = FRAG_TO_FILE[fragment];
 
     if (filename) {
-      // 既存音声を停止してから再生（重なり防止）
       if (currentAudio) {
         currentAudio.pause();
         currentAudio.currentTime = 0;
       }
-      currentAudio = new Audio(`${base}/audio/${filename}.mp3`);
+      // キャッシュ済み要素を再利用（iOS: 同一インスタンスなら再生可能）
+      if (!_audioCache[filename]) {
+        _audioCache[filename] = new Audio(`${base}/audio/${filename}.mp3`);
+      }
+      currentAudio = _audioCache[filename];
+      currentAudio.currentTime = 0;
       currentAudio.volume = 1.0;
-      currentAudio.play().catch(() => {
-        speakFallback(fragment);
-      });
+      currentAudio.play().catch(() => speakFallback(fragment));
     } else {
       speakFallback(fragment);
     }
@@ -328,7 +358,7 @@
     currentStrokeIdx = kanji.strokes.length;
   }
 
-  export { clearAll, replayDemo, freezeCompleted };
+  export { clearAll, replayDemo, freezeCompleted, primeAudio };
 </script>
 
 <div class="trace-wrap">

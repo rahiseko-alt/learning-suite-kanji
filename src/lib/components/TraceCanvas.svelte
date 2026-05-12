@@ -29,9 +29,6 @@
   const STROKE_GAP_MS = 400;           // 画と画の間（変更なし）
 
   let preferredVoice = null;
-  let currentAudio = null;
-  const _audioCache = {};    // HTMLAudio 要素キャッシュ（iOS priming 用）
-  let _currentSource = null; // 予備（将来拡張用）
 
   // 覚え歌の縦スライド: 現在の画の動作語が窓の中央に来るよう transform で制御
   let lyricStripEl = $state();
@@ -211,10 +208,8 @@
       cancelAnimationFrame(animFrameId);
       animFrameId = null;
     }
-    // 3. ボイス停止（AudioContext + HTMLAudio + Web Speech）
+    // 3. ボイス停止
     if (typeof window !== 'undefined') {
-      if (_currentSource) { try { _currentSource.stop(); } catch {} _currentSource = null; }
-      if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
       speechSynthesis.cancel();
     }
     // 4. ナビ・進捗リセット（お手本ゴーストも非表示に戻す）
@@ -222,25 +217,10 @@
     currentStrokeIdx = -1;
   }
 
-  // 動作語 → mp3 ファイル名マップ（static/audio/ 配下）
-  const FRAG_TO_FILE = { 'よこ': 'yoko', 'たて': 'tate', 'ノ': 'no' };
-
   // スタートボタン押下（ユーザージェスチャー）時に親から呼ぶ。
-  // muted=true で play() → pause() することでiOSのautoplay制限を解除。
-  // audible な音は一切出さない。
+  // speechSynthesis をジェスチャー中に解放してiOS制限を回避。
   function primeAudio() {
     if (typeof window === 'undefined') return;
-    Object.entries(FRAG_TO_FILE).forEach(([, filename]) => {
-      if (!_audioCache[filename]) {
-        _audioCache[filename] = new Audio(`${base}/audio/${filename}.mp3`);
-      }
-      const a = _audioCache[filename];
-      a.muted = true;
-      a.play()
-        .then(() => { a.pause(); a.muted = false; a.currentTime = 0; })
-        .catch(() => { a.muted = false; });
-    });
-    // speechSynthesis も解放
     if (typeof speechSynthesis !== 'undefined') {
       try { speechSynthesis.speak(new SpeechSynthesisUtterance('')); setTimeout(() => speechSynthesis.cancel(), 50); } catch {}
     }
@@ -249,23 +229,7 @@
   function speakFragment(idx) {
     if (typeof window === 'undefined') return;
     const fragment = kanji.strokes[idx].songFragment;
-    const filename = FRAG_TO_FILE[fragment];
-
-    if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
-
-    if (filename) {
-      // キャッシュ済み要素を再利用（iOSでpriming済みのため再生可能）
-      if (!_audioCache[filename]) {
-        _audioCache[filename] = new Audio(`${base}/audio/${filename}.mp3`);
-      }
-      currentAudio = _audioCache[filename];
-      currentAudio.currentTime = 0;
-      currentAudio.muted = false;
-      currentAudio.volume = 1.0;
-      currentAudio.play().catch(() => speakFallback(fragment));
-    } else {
-      speakFallback(fragment);
-    }
+    speakFallback(fragment);
   }
 
   function speakFallback(fragment) {
@@ -344,8 +308,6 @@
   function freezeCompleted() {
     if (animFrameId) cancelAnimationFrame(animFrameId);
     if (typeof window !== 'undefined') {
-      if (_currentSource) { try { _currentSource.stop(); } catch {} _currentSource = null; }
-      if (currentAudio) { currentAudio.pause(); currentAudio = null; }
       speechSynthesis.cancel();
     }
     progress = kanji.strokes.map(() => 1);

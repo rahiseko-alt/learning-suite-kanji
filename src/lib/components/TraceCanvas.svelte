@@ -5,7 +5,7 @@
   // onRestart: 「やりなおし」が押されたら親に通知（スタート相当を発動）
   // active: 現在アクティブか（複数文字横並び時に親が制御。単漢字セットでは true 固定）
   //         false のときは pointer 入力受付なし・opacity を下げる・覚え歌窓を隠す
-  let { kanji, onRestart = () => {}, active = true } = $props();
+  let { kanji, onRestart = () => {}, active = true, onNaviDone = () => {} } = $props();
 
   let canvas = $state();
   let ctx;
@@ -275,6 +275,7 @@
         progress = kanji.strokes.map(() => 1);
         currentStrokeIdx = kanji.strokes.length;
         animFrameId = null;
+        onNaviDone();
         return;
       }
 

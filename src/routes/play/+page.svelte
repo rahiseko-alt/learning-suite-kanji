@@ -137,6 +137,7 @@
     };
   });
   let showSettings = $state(false);
+  let showDoneBtn = $state(false);
   let countdown = $state(0); // 0 = 非表示 / 3,2,1 = カウントダウン中
   let cdEl = $state();
   // Session 266 v2: 各枠の「スタート押下済み」「できた!押下済み」を独立管理
@@ -227,6 +228,7 @@
     phase = 'practice';
     animationStarted = false;
     showPraise = false;
+    showDoneBtn = false;
     stageIndex = 0;
     currentIndex = 0;
     startedFlags = Array(kanjis.length).fill(false);
@@ -238,21 +240,26 @@
     if (!hasNextStage) return;
     showPraise = false;
     showPraiseAnim = false;
+    showDoneBtn = false;
     animationStarted = false;
     currentIndex = 0;
     traceComps.forEach((t) => t?.clearAll?.());
     stageIndex = stageIndex + 1;
-    // kanjis 変化に追従して startedFlags / completedFlags は $effect で再初期化される
+    startedFlags = Array(kanjis.length).fill(false);
+    completedFlags = Array(kanjis.length).fill(false);
   }
 
   // Session 273: 最終ステージ完了後の「もういっかい」= 全選択を最初のステージから
   function restartAll() {
     showPraise = false;
     showPraiseAnim = false;
+    showDoneBtn = false;
     animationStarted = false;
     currentIndex = 0;
     traceComps.forEach((t) => t?.clearAll?.());
     stageIndex = 0;
+    startedFlags = Array(kanjis.length).fill(false);
+    completedFlags = Array(kanjis.length).fill(false);
   }
 
   async function runCountdownThen(action) {
@@ -277,8 +284,9 @@
   //   → completedFlags.every() が done 後に再評価されず praise が出ないバグを解消
   async function startKanji(i) {
     currentIndex = i;
-    startedFlags = startedFlags.with(i, true);
+    startedFlags = Array(kanjis.length).fill(true); // 全枠一括アンロック
     animationStarted = true;
+    showDoneBtn = true;
     await runCountdownThen(() => traceComps[i]?.replayDemo?.());
   }
 
@@ -303,9 +311,10 @@
     }
   }
 
-  // 「もういっかい」: praise から最初に戻す（全枠リセット・全スタートボタン再表示）
+  // 「もういっかい」: praise から最初に戻す（全枠リセット・スタートボタン復活）
   function retry() {
     showPraise = false;
+    showDoneBtn = false;
     currentIndex = 0;
     traceComps.forEach((t) => t?.clearAll?.());
     startedFlags = Array(kanjis.length).fill(false);
@@ -326,6 +335,26 @@
   function closeSettings() {
     saveAssets();
     showSettings = false;
+  }
+
+  async function handleNaviDone(i) {
+    await new Promise((r) => setTimeout(r, 1000)); // 1秒後にロック
+    traceComps[i]?.freezeCompleted?.();
+    completedFlags = completedFlags.with(i, true);
+    if (i + 1 < kanjis.length) {
+      currentIndex = i + 1;
+      traceComps[i + 1]?.replayDemo?.();
+    } else {
+      animationStarted = false;
+      showDoneBtn = true;
+    }
+  }
+
+  function doneAll() {
+    showDoneBtn = false;
+    showPraise = true;
+    showPraiseAnim = true;
+    setTimeout(() => { showPraiseAnim = false; }, 6000);
   }
 </script>
 
@@ -388,27 +417,21 @@
       <div class="canvas-area">
         {#each kanjis as k, i (k.char)}
           <div class="canvas-wrap">
-            <!-- Session 267 S1+S2: 上=スタート/やりなおし切替 -->
-            <div class="frame-action frame-action-top">
-              {#if !startedFlags[i]}
-                <button
-                  class="btn btn--primary frame-btn frame-btn--pulse"
-                  onclick={() => startKanji(i)}
-                >▶ スタート</button>
-              {:else}
-                <button
-                  class="btn btn--secondary frame-btn"
-                  onclick={() => replayKanji(i)}
-                >↻ やりなおし</button>
-              {/if}
-            </div>
-
             <div class="canvas-host" class:locked={!startedFlags[i] || completedFlags[i]} aria-disabled={!startedFlags[i] || completedFlags[i]}>
+              {#if i === 0 && !startedFlags[0]}
+                <div class="start-overlay">
+                  <button
+                    class="btn btn--primary frame-btn frame-btn--pulse"
+                    onclick={() => startKanji(0)}
+                  >▶ スタート</button>
+                </div>
+              {/if}
               <div class="reading-badge" aria-hidden="true">{activeSet.kanjiReadings?.[i] ?? k.reading ?? ''}</div>
               <TraceCanvas
                 bind:this={traceComps[i]}
                 kanji={k}
                 onRestart={() => startKanji(i)}
+                onNaviDone={() => handleNaviDone(i)}
               />
               {#if i === currentIndex && countdown > 0}
                 <div class="countdown-overlay" aria-live="assertive">
@@ -416,19 +439,16 @@
                 </div>
               {/if}
             </div>
-
-            <!-- Session 267 S1+S2: 下=できた! -->
-            <div class="frame-action frame-action-bottom">
-              <button
-                class="btn btn--primary frame-btn"
-                onclick={() => doneKanji(i)}
-                disabled={!startedFlags[i] || completedFlags[i]}
-              >できた！</button>
-            </div>
           </div>
         {/each}
       </div>
     </div>
+
+    {#if showDoneBtn}
+      <div class="done-area">
+        <button class="btn btn--primary big" onclick={doneAll}>できた！</button>
+      </div>
+    {/if}
 
     {#if showPraiseAnim}
       <div class="praise-bg-anim" aria-hidden="true">
@@ -772,6 +792,25 @@
       max-width: 380px;
       margin: 0 auto;
     }
+  }
+
+  .start-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    pointer-events: auto;
+  }
+
+  .done-area {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    max-width: 480px;
   }
 
   /* === カウントダウンオーバーレイ（背景透明・数字だけ） === */

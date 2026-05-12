@@ -29,7 +29,10 @@
   const STROKE_GAP_MS = 400;           // 画と画の間（変更なし）
 
   let preferredVoice = null;
-  let currentAudio = null;
+  let currentAudio = null;   // HTMLAudio フォールバック用
+  let _actx = null;          // Web Audio API コンテキスト
+  const _audioBuffers = {};  // デコード済み AudioBuffer キャッシュ
+  let _currentSource = null; // 再生中の AudioBufferSourceNode
 
   // 覚え歌の縦スライド: 現在の画の動作語が窓の中央に来るよう transform で制御
   let lyricStripEl = $state();
@@ -209,13 +212,10 @@
       cancelAnimationFrame(animFrameId);
       animFrameId = null;
     }
-    // 3. ボイス停止（mp3 + Web Speech 両方）
+    // 3. ボイス停止（AudioContext + HTMLAudio + Web Speech）
     if (typeof window !== 'undefined') {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
-        currentAudio = null;
-      }
+      if (_currentSource) { try { _currentSource.stop(); } catch {} _currentSource = null; }
+      if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
       speechSynthesis.cancel();
     }
     // 4. ナビ・進捗リセット（お手本ゴーストも非表示に戻す）
@@ -226,31 +226,30 @@
   // 動作語 → mp3 ファイル名マップ（static/audio/ 配下）
   const FRAG_TO_FILE = { 'よこ': 'yoko', 'たて': 'tate', 'ノ': 'no' };
 
-  // iOS/Android: rAF内でnew Audio().play()はブロックされるため、
-  // ユーザージェスチャー時点でAudio要素を作成・解放してキャッシュする
-  const _audioCache = {};
-
-  // スタートボタン押下（ユーザージェスチャー）時に親から呼ぶ
+  // スタートボタン押下（ユーザージェスチャー）時に親から呼ぶ。
+  // AudioContext.resume() をジェスチャー中に実行することでiOS制限を解除。
+  // mp3のデコードは非同期（カウントダウン3秒以内に完了）。
   function primeAudio() {
     if (typeof window === 'undefined') return;
-    Object.entries(FRAG_TO_FILE).forEach(([, filename]) => {
-      const url = `${base}/audio/${filename}.mp3`;
-      if (!_audioCache[filename]) {
-        _audioCache[filename] = new Audio(url);
-      }
-      const a = _audioCache[filename];
-      a.volume = 0;
-      const p = a.play();
-      if (p) p.catch(() => {}).finally?.(() => { a.pause(); a.currentTime = 0; a.volume = 1.0; });
-    });
+    try {
+      if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+      _actx.resume();
+    } catch {}
+    // mp3 を事前デコードしてキャッシュ（再生時に遅延ゼロ）
+    const ctx = _actx;
+    if (ctx) {
+      Object.entries(FRAG_TO_FILE).forEach(async ([, filename]) => {
+        if (_audioBuffers[filename]) return;
+        try {
+          const resp = await fetch(`${base}/audio/${filename}.mp3`);
+          const arr = await resp.arrayBuffer();
+          _audioBuffers[filename] = await ctx.decodeAudioData(arr);
+        } catch {}
+      });
+    }
     // speechSynthesis も解放
     if (typeof speechSynthesis !== 'undefined') {
-      try {
-        const u = new SpeechSynthesisUtterance('');
-        u.volume = 0;
-        speechSynthesis.speak(u);
-        setTimeout(() => speechSynthesis.cancel(), 50);
-      } catch {}
+      try { speechSynthesis.speak(new SpeechSynthesisUtterance('')); setTimeout(() => speechSynthesis.cancel(), 50); } catch {}
     }
   }
 
@@ -259,19 +258,28 @@
     const fragment = kanji.strokes[idx].songFragment;
     const filename = FRAG_TO_FILE[fragment];
 
+    // 前の音を止める
+    if (_currentSource) { try { _currentSource.stop(); } catch {} _currentSource = null; }
+    if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
+
     if (filename) {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.currentTime = 0;
+      const buf = _audioBuffers[filename];
+      if (_actx && buf) {
+        // AudioContext 経由で再生（iOS/Android で確実に動作）
+        try {
+          const src = _actx.createBufferSource();
+          src.buffer = buf;
+          src.connect(_actx.destination);
+          src.start(0);
+          _currentSource = src;
+          return;
+        } catch {}
       }
-      // キャッシュ済み要素を再利用（iOS: 同一インスタンスなら再生可能）
-      if (!_audioCache[filename]) {
-        _audioCache[filename] = new Audio(`${base}/audio/${filename}.mp3`);
-      }
-      currentAudio = _audioCache[filename];
-      currentAudio.currentTime = 0;
-      currentAudio.volume = 1.0;
-      currentAudio.play().catch(() => speakFallback(fragment));
+      // フォールバック: HTMLAudio（PC 向け）
+      const audio = new Audio(`${base}/audio/${filename}.mp3`);
+      audio.volume = 1.0;
+      currentAudio = audio;
+      audio.play().catch(() => speakFallback(fragment));
     } else {
       speakFallback(fragment);
     }
@@ -351,6 +359,7 @@
   function freezeCompleted() {
     if (animFrameId) cancelAnimationFrame(animFrameId);
     if (typeof window !== 'undefined') {
+      if (_currentSource) { try { _currentSource.stop(); } catch {} _currentSource = null; }
       if (currentAudio) { currentAudio.pause(); currentAudio = null; }
       speechSynthesis.cancel();
     }

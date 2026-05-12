@@ -247,6 +247,7 @@
     stageIndex = stageIndex + 1;
     startedFlags = Array(kanjis.length).fill(false);
     completedFlags = Array(kanjis.length).fill(false);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
   // Session 273: 最終ステージ完了後の「もういっかい」= 全選択を最初のステージから

@@ -287,9 +287,10 @@
     // iOS/Android: ユーザージェスチャー中に音声を解放（rAF内再生を可能にする）
     traceComps.forEach((t) => t?.primeAudio?.());
     currentIndex = i;
-    startedFlags = Array(kanjis.length).fill(true); // 全枠一括アンロック
+    // 1ページ1文字方式: 押された枠のみアンロック
+    startedFlags = startedFlags.with(i, true);
     animationStarted = true;
-    showDoneBtn = true;
+    showDoneBtn = false;
     await runCountdownThen(() => traceComps[i]?.replayDemo?.());
   }
 
@@ -354,10 +355,27 @@
   }
 
   function doneAll() {
+    // 最終ページの文字も完了マーク（次の字遷移を経ないため明示的に freeze）
+    traceComps[currentIndex]?.freezeCompleted?.();
+    completedFlags = completedFlags.with(currentIndex, true);
     showDoneBtn = false;
     showPraise = true;
     showPraiseAnim = true;
     setTimeout(() => { showPraiseAnim = false; }, 6000);
+  }
+
+  // 井上氏指示（2026-05-25）: 1ページ1文字 + 「つぎの字」ボタンで次ページへ
+  function nextKanji() {
+    if (currentIndex >= kanjis.length - 1) return;
+    // 現在の文字を完了マーク（書字途中でも freeze して次へ）
+    traceComps[currentIndex]?.freezeCompleted?.();
+    completedFlags = completedFlags.with(currentIndex, true);
+    currentIndex = currentIndex + 1;
+    // 次ページは「スタート」ボタンから始める
+    animationStarted = false;
+    showDoneBtn = false;
+    startedFlags = startedFlags.with(currentIndex, false);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'instant' });
   }
 </script>
 
@@ -416,42 +434,48 @@
 
     <!-- Session 267 S4: 上部グローバルボタン撤去（各枠ボタンが代替） -->
 
-    <div class="play-area" class:multi={kanjis.length > 1}>
+    <div class="play-area">
       <div class="canvas-area">
         {#each kanjis as k, i (k.char)}
-          <div class="canvas-wrap">
-            <div class="canvas-host" class:locked={!startedFlags[i] || completedFlags[i]} aria-disabled={!startedFlags[i] || completedFlags[i]}>
-              {#if i === 0 && !startedFlags[0]}
-                <div class="start-overlay">
-                  <button
-                    class="btn btn--primary frame-btn frame-btn--pulse"
-                    onclick={() => startKanji(0)}
-                  >▶ スタート</button>
-                </div>
-              {/if}
-              <div class="reading-badge" aria-hidden="true">{activeSet.kanjiReadings?.[i] ?? k.reading ?? ''}</div>
-              <TraceCanvas
-                bind:this={traceComps[i]}
-                kanji={k}
-                onRestart={() => startKanji(i)}
-                onNaviDone={() => handleNaviDone(i)}
-              />
-              {#if i === currentIndex && countdown > 0}
-                <div class="countdown-overlay" aria-live="assertive">
-                  <div class="countdown-num" bind:this={cdEl}>{countdown}</div>
-                </div>
-              {/if}
+          {#if i === currentIndex}
+            <div class="canvas-wrap">
+              <div class="canvas-host" class:locked={!startedFlags[i] || completedFlags[i]} aria-disabled={!startedFlags[i] || completedFlags[i]}>
+                {#if !startedFlags[i]}
+                  <div class="start-overlay">
+                    <button
+                      class="btn btn--primary frame-btn frame-btn--pulse"
+                      onclick={() => startKanji(i)}
+                    >▶ スタート</button>
+                  </div>
+                {/if}
+                <div class="reading-badge" aria-hidden="true">{activeSet.kanjiReadings?.[i] ?? k.reading ?? ''}</div>
+                <div class="page-indicator" aria-hidden="true">{i + 1} / {kanjis.length}</div>
+                <TraceCanvas
+                  bind:this={traceComps[i]}
+                  kanji={k}
+                  onRestart={() => startKanji(i)}
+                  onNaviDone={() => handleNaviDone(i)}
+                />
+                {#if countdown > 0}
+                  <div class="countdown-overlay" aria-live="assertive">
+                    <div class="countdown-num" bind:this={cdEl}>{countdown}</div>
+                  </div>
+                {/if}
+              </div>
             </div>
-          </div>
+          {/if}
         {/each}
       </div>
     </div>
 
-    {#if showDoneBtn}
-      <div class="done-area">
+    <!-- 井上氏指示（2026-05-25）: 1ページ1文字 + 枠外右下ナビボタン -->
+    <div class="page-nav">
+      {#if currentIndex < kanjis.length - 1}
+        <button class="btn btn--primary big" onclick={nextKanji}>つぎの字 →</button>
+      {:else}
         <button class="btn btn--primary big" onclick={doneAll}>できた！</button>
-      </div>
-    {/if}
+      {/if}
+    </div>
 
     {#if showPraiseAnim}
       <div class="praise-bg-anim" aria-hidden="true">
@@ -716,9 +740,6 @@
     justify-content: center;
     margin-top: 4.5rem;
   }
-  .play-area.multi {
-    max-width: 900px;
-  }
   /* Session 266 v3: マスター指示「枠の大きさはいつも全部同じ」 → 動的サイズ変化を撤回し常に均等表示 */
   .canvas-area {
     flex: 1;
@@ -781,22 +802,6 @@
     }
   }
 
-  /* Session 267 R1+R2: スマホ縦配置（PC・タブレット 横配置を維持） */
-  @media (max-width: 600px) {
-    .play-area.multi {
-      max-width: 100%;
-    }
-    .play-area.multi .canvas-area {
-      flex-direction: column;
-      gap: 1rem;
-    }
-    .play-area.multi .canvas-wrap {
-      width: 100%;
-      max-width: 380px;
-      margin: 0 auto;
-    }
-  }
-
   .start-overlay {
     position: absolute;
     inset: 0;
@@ -814,6 +819,30 @@
     justify-content: center;
     width: 100%;
     max-width: 480px;
+  }
+
+  /* 井上氏指示（2026-05-25）: 1ページ1文字 + 枠外右下ナビボタン */
+  .page-nav {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 15;
+  }
+  /* ページインジケーター（右上「1 / 3」表示） */
+  .page-indicator {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    z-index: 4;
+    font-size: clamp(0.95rem, 3.5vw, 1.2rem);
+    font-weight: 800;
+    color: #1f2937;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid #60a5fa;
+    border-radius: 0.6rem;
+    padding: 0.1rem 0.6rem;
+    pointer-events: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   /* === カウントダウンオーバーレイ（背景透明・数字だけ） === */

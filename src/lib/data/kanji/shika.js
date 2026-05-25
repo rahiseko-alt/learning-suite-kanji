@@ -55,7 +55,7 @@ export const KANJI_SHIKA = {
       numPos: { x: 30.25, y: 39.25 }
     },
     {
-      id: 5,
+      id: 5, pauseAfter: true,
       color: '#a855f7',
       label: 'よこ',
       songFragment: 'よこ',

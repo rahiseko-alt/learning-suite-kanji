@@ -35,7 +35,7 @@ export const KANJI_JOU = {
       numPos: { x: 15.5, y: 23.5 }
     },
     {
-      id: 3,
+      id: 3, pauseAfter: true,
       color: '#22c55e',
       label: '土',
       songFragment: '土',

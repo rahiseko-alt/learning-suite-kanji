@@ -85,7 +85,7 @@ export const KANJI_KAMI = {
       numPos: { x: 59.5, y: 42.13 }
     },
     {
-      id: 8,
+      id: 8, pauseAfter: true,
       color: '#06b6d4',
       label: '日',
       songFragment: '日',

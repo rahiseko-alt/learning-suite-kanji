@@ -95,7 +95,7 @@ export const KANJI_DOU = {
       numPos: { x: 56.46, y: 64.63 }
     },
     {
-      id: 9,
+      id: 9, pauseAfter: true,
       color: '#84cc16',
       label: '目',
       songFragment: '目',

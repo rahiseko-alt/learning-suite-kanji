@@ -45,7 +45,7 @@ export const KANJI_KA = {
       numPos: { x: 18.75, y: 31.63 }
     },
     {
-      id: 4,
+      id: 4, pauseAfter: true,
       color: '#f97316',
       label: '口',
       songFragment: '口',

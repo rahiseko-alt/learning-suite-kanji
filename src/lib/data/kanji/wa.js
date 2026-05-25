@@ -55,7 +55,7 @@ export const KANJI_WA = {
       numPos: { x: 26.5, y: 55.5 }
     },
     {
-      id: 5,
+      id: 5, pauseAfter: true,
       color: '#a855f7',
       label: '木',
       songFragment: '木',

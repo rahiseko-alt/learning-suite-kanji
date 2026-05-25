@@ -55,7 +55,7 @@ export const KANJI_HIGASHI = {
       numPos: { x: 35.25, y: 48.7 }
     },
     {
-      id: 5,
+      id: 5, pauseAfter: true,
       color: '#a855f7',
       label: '日',
       songFragment: '日',

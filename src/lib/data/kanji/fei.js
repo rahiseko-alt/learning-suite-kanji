@@ -73,7 +73,7 @@ export const KANJI_FEI = {
       numPos: { x: 30.75, y: 33.13 }
     },
     {
-      id: 6,
+      id: 6, pauseAfter: true,
       color: '#38bdf8',
       label: 'たてはらい',
       songFragment: 'たてはらい',

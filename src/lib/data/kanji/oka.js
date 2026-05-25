@@ -65,7 +65,7 @@ export const KANJI_OKA = {
       numPos: { x: 37.68, y: 42.83 }
     },
     {
-      id: 6,
+      id: 6, pauseAfter: true,
       color: '#ef4444',
       label: 'コ',
       songFragment: 'コ',

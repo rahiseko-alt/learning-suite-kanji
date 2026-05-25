@@ -35,7 +35,7 @@ export const KANJI_KITA = {
       numPos: { x: 27.75, y: 22.5 }
     },
     {
-      id: 3,
+      id: 3, pauseAfter: true,
       color: '#22c55e',
       label: 'よこ',
       songFragment: 'よこ',

@@ -55,7 +55,7 @@ export const KANJI_SHIMA = {
       numPos: { x: 41.25, y: 33.13 }
     },
     {
-      id: 5,
+      id: 5, pauseAfter: true,
       color: '#a855f7',
       label: '白',
       songFragment: '白',

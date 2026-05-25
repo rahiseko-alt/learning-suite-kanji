@@ -35,7 +35,7 @@ export const KANJI_GI = {
       numPos: { x: 6.5, y: 46.5 }
     },
     {
-      id: 3,
+      id: 3, pauseAfter: true,
       color: '#22c55e',
       label: '山',
       songFragment: '山',

@@ -342,16 +342,10 @@
   }
 
   async function handleNaviDone(i) {
-    await new Promise((r) => setTimeout(r, 1000)); // 1秒後にロック
-    traceComps[i]?.freezeCompleted?.();
-    completedFlags = completedFlags.with(i, true);
-    if (i + 1 < kanjis.length) {
-      currentIndex = i + 1;
-      traceComps[i + 1]?.replayDemo?.();
-    } else {
-      animationStarted = false;
-      showDoneBtn = true;
-    }
+    // 井上氏指示（2026-05-25・修正v2）: ナビ完了時の「勝手に次の字に行く」を禁止
+    //   ナビが終わっても自動遷移しない。次の字へは右下「つぎの字 →」ボタン操作のみ
+    //   児童は最後の動作語を書き終わるまで自分のペースで書字できる
+    animationStarted = false;
   }
 
   function doneAll() {

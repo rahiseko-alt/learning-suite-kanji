@@ -55,7 +55,7 @@ export const KANJI_SAKA = {
       numPos: { x: 43.5, y: 21.5 }
     },
     {
-      id: 5,
+      id: 5, pauseAfter: true,
       color: '#a855f7',
       label: 'はらい',
       songFragment: 'はらい',

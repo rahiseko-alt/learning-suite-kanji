@@ -55,7 +55,7 @@ export const KANJI_JI = {
       numPos: { x: 51.75, y: 29.5 }
     },
     {
-      id: 5,
+      id: 5, pauseAfter: true,
       color: '#a855f7',
       label: '日',
       songFragment: '日',

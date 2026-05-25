@@ -65,7 +65,7 @@ export const KANJI_KAI = {
       numPos: { x: 57.75, y: 21.13 }
     },
     {
-      id: 6,
+      id: 6, pauseAfter: true,
       color: '#ef4444',
       label: 'く',
       songFragment: 'く',

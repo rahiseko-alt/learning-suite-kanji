@@ -65,7 +65,7 @@ export const KANJI_FU = {
       numPos: { x: 30.49, y: 70.33 }
     },
     {
-      id: 6,
+      id: 6, pauseAfter: true,
       color: '#ef4444',
       label: 'よこ',
       songFragment: 'よこ',

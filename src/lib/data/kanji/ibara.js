@@ -65,7 +65,7 @@ export const KANJI_IBARA = {
       numPos: { x: 10.5, y: 87.5 }
     },
     {
-      id: 6,
+      id: 6, pauseAfter: true,
       color: '#ef4444',
       label: 'よこはね',
       songFragment: 'よこはね',

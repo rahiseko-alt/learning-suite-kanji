@@ -35,7 +35,7 @@ export const KANJI_TO = {
       numPos: { x: 25.5, y: 12.5 }
     },
     {
-      id: 3,
+      id: 3, pauseAfter: true,
       color: '#22c55e',
       label: '土',
       songFragment: '土',

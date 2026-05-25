@@ -55,7 +55,7 @@ export const KANJI_KYOU = {
       numPos: { x: 32.25, y: 39.13 }
     },
     {
-      id: 5,
+      id: 5, pauseAfter: true,
       color: '#a855f7',
       label: '口',
       songFragment: '口',

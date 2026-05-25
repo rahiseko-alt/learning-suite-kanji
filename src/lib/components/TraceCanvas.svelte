@@ -19,6 +19,19 @@
   let currentStrokeIdx = $state(-1);
   let animFrameId = null;
 
+  // 井上氏指示（2026-05-25 修正v6 / (B) 案 + R4）: 集中力配分のため動作語境界で一時停止
+  //   児童書字軌跡 vs 動作語 path の一致率（カバー率）で「動作語完了」を客観判定 → resume
+  //   時間ベースの idle 検出は廃止（pointerup の意味曖昧性 = 4 通り解釈問題を構造的に解消）
+  //   設計詳細: docs/design/2026-05-25-pause-resume-strategy.md §推奨案 R4
+  let paused = $state(false);
+  let pauseResolver = null;
+  let runEpoch = 0; // replayDemo の中断検出用
+  let fragmentPathSamples = []; // 現動作語の全 path サンプル点列（SVG 座標）
+  let childTrace = []; // pause 中の児童書字軌跡（SVG 座標・点列）
+  const PATH_SAMPLE_STEP = 10;        // SVG 単位（viewBox 109 系で path を等間隔サンプリング）
+  const COVERAGE_DIST_THRESHOLD = 12;  // SVG 単位（児童軌跡 ↔ path 点の許容距離・調整中）
+  const COVERAGE_RATIO_THRESHOLD = 0.4; // 動作語完了判定（一旦緩めて挙動確認・「飛・和」で進まない問題切り分け）
+
   const PEN_WIDTH = 8;
   const PEN_COLOR = '#1e293b';
   // Session 266: 描画速度一定化（マスター指示「画数に限らず 1 ナビの速度を一定」）
@@ -162,6 +175,79 @@
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
+  // R4: Canvas px → SVG viewBox 座標変換（kanji.viewBox = "0 0 W H" を解析して比率変換）
+  function canvasToSvg(p) {
+    const rect = canvas.getBoundingClientRect();
+    const parts = (kanji.viewBox || '0 0 109 109').split(/\s+/).map(Number);
+    const vbW = parts[2] || 109;
+    const vbH = parts[3] || 109;
+    return { x: (p.x / rect.width) * vbW, y: (p.y / rect.height) * vbH };
+  }
+
+  // R4: SVG path → 等間隔サンプル点列（SVG 座標）
+  // 最低 8 区間（9 点）保証 — 短い path はサンプル点数少 = カバー率がデジタル化（25/50/75/100%）
+  //   して 60% 達成に 75% 必要となる問題を回避（「飛・和」の 1 画動作語 NG の原因）
+  function samplePath(d, step) {
+    if (typeof document === 'undefined') return [];
+    const ns = 'http://www.w3.org/2000/svg';
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', d);
+    const len = p.getTotalLength();
+    const points = [];
+    if (len <= 0) return points;
+    const n = Math.max(8, Math.ceil(len / step));
+    for (let i = 0; i <= n; i++) {
+      const s = (len * i) / n;
+      const pt = p.getPointAtLength(s);
+      points.push({ x: pt.x, y: pt.y });
+    }
+    return points;
+  }
+
+  // R4: カバー率計算 — 各 path 点について児童軌跡の最近傍距離が閾値以内なら「カバー済み」
+  // 修正v9（マスター指示 2026-05-25・和の「木」3画目で「口」ナビ誤発動の根本対策）:
+  //   path 終点が軌跡で未カバー = 別の画を書いた → カバー率 0% にリセット
+  //   例「木」画4（左はらい）と画5（右はらい）は開始点が中央上で近く、開始点近傍カバー率が偶然 40% 達成する問題を排除
+  function computeCoverage(pathSamples, trace, distThreshold) {
+    if (!trace.length) return 0;
+    let total = 0;
+    let covered = 0;
+    const dt2 = distThreshold * distThreshold;
+    for (const pathPts of pathSamples) {
+      if (pathPts.length === 0) continue;
+      // 修正v12（マスター指示 2026-05-25・「目の後しんにょうが途中で始まる」対策）:
+      //   path 始点 + 終点 両方 を軌跡が通過していなければカバー 0%
+      //   例 道画9（目の最後）終点=右下、道画6（かぎ）終点=右下 → 終点だけでは画6書字でも誤判定
+      //   始点も必須にすれば、軌跡が path 方向にそって全体を通過した証跡になる
+      const start = pathPts[0];
+      const end = pathPts[pathPts.length - 1];
+      let startCovered = false, endCovered = false;
+      for (const cp of trace) {
+        const dxs = start.x - cp.x;
+        const dys = start.y - cp.y;
+        if (dxs * dxs + dys * dys <= dt2) startCovered = true;
+        const dxe = end.x - cp.x;
+        const dye = end.y - cp.y;
+        if (dxe * dxe + dye * dye <= dt2) endCovered = true;
+        if (startCovered && endCovered) break;
+      }
+      if (!startCovered || !endCovered) {
+        total += pathPts.length;
+        continue; // 始点 or 終点 未通過 = カバー 0
+      }
+      // 通常カバー率計算
+      for (const pp of pathPts) {
+        total++;
+        for (const cp of trace) {
+          const dx = pp.x - cp.x;
+          const dy = pp.y - cp.y;
+          if (dx * dx + dy * dy <= dt2) { covered++; break; }
+        }
+      }
+    }
+    return total > 0 ? covered / total : 0;
+  }
+
   function pointerDown(e) {
     // Session 266 v3: 全枠で書字可能（マスター指示「同じ見え方」）→ active チェックを撤回
     e.preventDefault();
@@ -170,6 +256,12 @@
     drawing = true;
     lastX = p.x;
     lastY = p.y;
+    // R4 修正v8（マスター指示 2026-05-25・和の「木」3画目で「口」ナビ誤発動）:
+    //   各 pointer ストロークの軌跡を独立評価。pause 中の新規 pointerdown で軌跡をリセット
+    //   → 「最後の画」path に対して「直前 1 ストロークの軌跡」のみで判定する厳密化
+    if (paused) {
+      childTrace = [canvasToSvg(p)];
+    }
     ctx.beginPath();
     ctx.arc(p.x, p.y, ctx.lineWidth / 2, 0, Math.PI * 2);
     ctx.fill();
@@ -183,6 +275,8 @@
     ctx.moveTo(lastX, lastY);
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
+    // R4: pause 中なら軌跡を SVG 座標で蓄積
+    if (paused) childTrace.push(canvasToSvg(p));
     lastX = p.x;
     lastY = p.y;
   }
@@ -192,6 +286,13 @@
     drawing = false;
     if (canvas.hasPointerCapture?.(e.pointerId)) {
       canvas.releasePointerCapture(e.pointerId);
+    }
+    // R4: pause 中なら児童軌跡 vs path カバー率を計算 → 閾値以上で resume
+    if (paused && fragmentPathSamples.length > 0) {
+      const coverage = computeCoverage(fragmentPathSamples, childTrace, COVERAGE_DIST_THRESHOLD);
+      if (coverage >= COVERAGE_RATIO_THRESHOLD) {
+        resumeNav();
+      }
     }
   }
 
@@ -203,11 +304,16 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
     }
-    // 2. アニメ停止
+    // 2. アニメ停止 + pause 解除 + epoch 進めて既存ループを中断
+    runEpoch++;
     if (animFrameId) {
       cancelAnimationFrame(animFrameId);
       animFrameId = null;
     }
+    fragmentPathSamples = [];
+    childTrace = [];
+    paused = false;
+    if (pauseResolver) { pauseResolver(); pauseResolver = null; }
     // 3. ボイス停止
     if (typeof window !== 'undefined') {
       speechSynthesis.cancel();
@@ -242,74 +348,110 @@
     u.pitch = 1.4;
     u.volume = 1.0;
     if (preferredVoice) u.voice = preferredVoice;
+    // 修正v10: cancel 即 speak ではブラウザ実装で cancel が反映されず前の発話が継続する既知問題あり
+    //   → cancel 後 60ms 待機で確実に切り替え（マスター指摘「ヨコのナビなのにヤマ発話」対策）
     speechSynthesis.cancel();
-    speechSynthesis.speak(u);
+    setTimeout(() => speechSynthesis.speak(u), 60);
   }
 
-  function replayDemo() {
-    if (animFrameId) cancelAnimationFrame(animFrameId);
-    if (typeof window !== 'undefined') speechSynthesis.cancel();
-    progress = kanji.strokes.map(() => 0);
-    currentStrokeIdx = -1;
+  function resumeNav() {
+    if (!paused) return;
+    paused = false;
+    if (pauseResolver) { pauseResolver(); pauseResolver = null; }
+  }
 
-    let strokeIdx = 0;
-    let strokeStartTs = null;
-    let inGap = false;
-    let gapStartTs = null;
-
-    function step(ts) {
-      if (strokeIdx >= kanji.strokes.length) {
-        progress = kanji.strokes.map(() => 1);
-        currentStrokeIdx = kanji.strokes.length;
-        animFrameId = null;
-        onNaviDone();
-        return;
-      }
-
-      if (inGap) {
-        if (gapStartTs == null) gapStartTs = ts;
-        if (ts - gapStartTs >= STROKE_GAP_MS) {
-          strokeIdx++;
-          inGap = false;
-          gapStartTs = null;
-          strokeStartTs = null;
-        }
-        animFrameId = requestAnimationFrame(step);
-        return;
-      }
-
-      if (strokeStartTs == null) {
-        strokeStartTs = ts;
-        currentStrokeIdx = strokeIdx;
-        // Session 266: 動作語が前画と同じ場合は再発火しない（連続する同じ動作語は最初の画だけ発動）
-        const prevFrag = strokeIdx > 0 ? kanji.strokes[strokeIdx - 1].songFragment : null;
-        if (kanji.strokes[strokeIdx].songFragment !== prevFrag) {
-          speakFragment(strokeIdx);
-        }
+  function animateStroke(strokeIdx) {
+    return new Promise((resolve) => {
+      currentStrokeIdx = strokeIdx;
+      // Session 266: 連続する同じ動作語は最初の画だけ音声発火
+      const prevFrag = strokeIdx > 0 ? kanji.strokes[strokeIdx - 1].songFragment : null;
+      if (kanji.strokes[strokeIdx].songFragment !== prevFrag) {
+        speakFragment(strokeIdx);
       }
       // Session 266: 描画速度一定（pathLength / VELOCITY * 1000 で duration 計算 + MIN/MAX clamp）
       const rawDur = (pathLengths[strokeIdx] / STROKE_VELOCITY) * 1000;
       const dur = Math.max(MIN_STROKE_DURATION_MS, Math.min(MAX_STROKE_DURATION_MS, rawDur));
-      const t = Math.min((ts - strokeStartTs) / dur, 1);
-      const next = progress.slice();
-      next[strokeIdx] = t;
-      progress = next;
-
-      if (t >= 1) {
-        inGap = true;
+      let startTs = null;
+      function step(ts) {
+        if (startTs == null) startTs = ts;
+        const t = Math.min((ts - startTs) / dur, 1);
+        const next = progress.slice();
+        next[strokeIdx] = t;
+        progress = next;
+        if (t >= 1) {
+          animFrameId = null;
+          resolve();
+        } else {
+          animFrameId = requestAnimationFrame(step);
+        }
       }
       animFrameId = requestAnimationFrame(step);
+    });
+  }
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  async function replayDemo() {
+    // 既存ループ中断 + state リセット
+    runEpoch++;
+    const myEpoch = runEpoch;
+    if (animFrameId) cancelAnimationFrame(animFrameId);
+    if (typeof window !== 'undefined') speechSynthesis.cancel();
+    fragmentPathSamples = [];
+    childTrace = [];
+    paused = false;
+    if (pauseResolver) { pauseResolver(); pauseResolver = null; }
+    progress = kanji.strokes.map(() => 0);
+    currentStrokeIdx = -1;
+
+    for (let strokeIdx = 0; strokeIdx < kanji.strokes.length; strokeIdx++) {
+      if (myEpoch !== runEpoch) return;
+      await animateStroke(strokeIdx);
+      if (myEpoch !== runEpoch) return;
+
+      const isLast = strokeIdx >= kanji.strokes.length - 1;
+      // 井上氏指示（2026-05-25 修正v3 / (B) 案）: 動作語が切り替わる境界で必ず pause
+      //   = ナビは 1 動作語分しか進まず、児童書字を絶対に追い越さない構造
+      //   data 側の pauseAfter フラグは無視（将来 (A)/(C) 案戻り時に活用予定）
+      const nextStrokeIsNewFragment = !isLast &&
+        kanji.strokes[strokeIdx].songFragment !== kanji.strokes[strokeIdx + 1].songFragment;
+      if (nextStrokeIsNewFragment) {
+        // R4 修正v7（マスター指示 2026-05-25）: 動作語の「最後の画」のみを判定対象に
+        //   = サンプル点数が動作語によらず一定（≈9 点）/ 長動作語のカバー難問題解消
+        //   strokeIdx は「動作語境界の直前画」= 当動作語の最後の画（既に確定）
+        fragmentPathSamples = [samplePath(kanji.strokes[strokeIdx].d, PATH_SAMPLE_STEP)];
+        childTrace = [];
+        paused = true;
+        if (typeof window !== 'undefined') speechSynthesis.cancel();
+        await new Promise((r) => { pauseResolver = r; });
+        if (myEpoch !== runEpoch) return;
+        // 修正v11（マスター指示 2026-05-25）: resume 後、次の動作語ナビまで一呼吸
+        await sleep(600);
+        if (myEpoch !== runEpoch) return;
+      }
+
+      if (!isLast) {
+        await sleep(STROKE_GAP_MS);
+        if (myEpoch !== runEpoch) return;
+      }
     }
 
-    animFrameId = requestAnimationFrame(step);
+    progress = kanji.strokes.map(() => 1);
+    currentStrokeIdx = kanji.strokes.length;
+    onNaviDone();
   }
 
   // Session 266: 「できた!」で次漢字に遷移する時、現在漢字を完了状態固定（既書字保持・アニメ停止）
   function freezeCompleted() {
+    runEpoch++;
     if (animFrameId) cancelAnimationFrame(animFrameId);
     if (typeof window !== 'undefined') {
       speechSynthesis.cancel();
     }
+    fragmentPathSamples = [];
+    childTrace = [];
+    paused = false;
+    if (pauseResolver) { pauseResolver(); pauseResolver = null; }
     progress = kanji.strokes.map(() => 1);
     currentStrokeIdx = kanji.strokes.length;
   }
@@ -490,6 +632,7 @@
     -webkit-user-select: none;
     user-select: none;
   }
+
 
   /* Session 265: tools セクション削除（ボタンは play/+page.svelte 側に統合） */
 

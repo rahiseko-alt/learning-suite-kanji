@@ -35,7 +35,7 @@ export const KANJI_NA = {
       numPos: { x: 43.25, y: 10.25 }
     },
     {
-      id: 3,
+      id: 3, pauseAfter: true,
       color: '#22c55e',
       label: '大',
       songFragment: '大',

@@ -25,12 +25,21 @@
   let assets = $state({
     character: null,
     emoji: null,
-    icon: null
+    icon: null,
+    // play 画面の「次へ進む系」ボタン背景画像。同一 STORAGE_KEY 共有のため既定を揃え、トップ保存で消さない
+    next1: null,
+    next2: null,
+    next3: null,
+    doneButton: null
   });
   let adjustments = $state({
     character: { x: 0, y: 0, scale: 1 },
     emoji: { x: 0, y: 0, scale: 1 },
-    icon: { x: 0, y: 0, scale: 1 }
+    icon: { x: 0, y: 0, scale: 1 },
+    next1: { x: 0, y: 0, scale: 1 },
+    next2: { x: 0, y: 0, scale: 1 },
+    next3: { x: 0, y: 0, scale: 1 },
+    doneButton: { x: 0, y: 0, scale: 1 }
   });
 
   const STORAGE_KEY = 'learning-suite:kanji:assets';
@@ -45,6 +54,9 @@
         if (data.character) assets.character = data.character;
         if (data.emoji) assets.emoji = data.emoji;
         if (data.icon) assets.icon = data.icon;
+        for (const k of ['next1', 'next2', 'next3', 'doneButton']) {
+          if (data[k]) assets[k] = data[k];
+        }
       }
       const savedAdj = localStorage.getItem(ADJ_KEY);
       if (savedAdj) {

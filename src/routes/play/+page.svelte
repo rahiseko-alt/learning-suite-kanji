@@ -6,6 +6,7 @@
   import TraceCanvas from '$lib/components/TraceCanvas.svelte';
   import AssetSettings from '$lib/components/AssetSettings.svelte';
   import { SETS, getSetById } from '$lib/data/sets.js';
+  import { CHEER_COUNTDOWN, CHEER_WRITING, CHEER_ALMOST, CHEER_DONE } from '$lib/cheers.js';
 
   // Session 267 v5: 複数 sets= 対応（カンマ区切り）/ 単数 ?set= 互換も維持
   let rawSetIds = $derived(
@@ -31,6 +32,29 @@
   }
   let currentIndex = $state(0);
   let activeKanji = $derived(kanjis[currentIndex] ?? kanjis[0]);
+  // 井上氏要望: 「つぎの字」ボタンの出現回数（currentIndex）ごとに別画像。3 回目（4 文字目への遷移）まで対応
+  let nextSkinKey = $derived(['next1', 'next2', 'next3'][currentIndex] ?? null);
+  // 井上氏要望（2026-06-02 改訂）: ボタンから上へフェードしながら次々に出る応援メッセージ。
+  //   フェーズ同期（カウントダウン→書いてる途中→もうすぐ終わる→できた）。開始前は何も出さない。
+  let floatMsgs = $state([]);
+  let msgSeq = 0;
+  // 井上氏指摘（2026-06-02）: ナビと同時だと早い。約2呼吸（2秒）遅らせて出す
+  const MSG_DELAY_MS = 2000;
+  function emitMsg(pool, color = '#0ea5e9') {
+    const text = pool[Math.floor(Math.random() * pool.length)];
+    const id = ++msgSeq;
+    floatMsgs = [...floatMsgs, { id, text, color }];
+    // 1.7s のフロートアニメ終了で消す
+    setTimeout(() => { floatMsgs = floatMsgs.filter((m) => m.id !== id); }, 1700);
+  }
+  // 書き順ナビの各画開始に同期（最後の画は「もうすぐ終わる」系）。約2呼吸遅らせる
+  function handleStroke(strokeIdx, total) {
+    const isLast = strokeIdx >= total - 1;
+    setTimeout(
+      () => emitMsg(isLast ? CHEER_ALMOST : CHEER_WRITING, isLast ? '#f59e0b' : '#0ea5e9'),
+      MSG_DELAY_MS
+    );
+  }
 
   let phase = $state('start');
   let traceComps = $state([]);
@@ -175,13 +199,23 @@
   let assets = $state({
     character: null, // null = デフォルト🐱 / DataURL = アップロード画像
     emoji: null,
-    icon: null // Session 267 v4: ホーム画面アイコン（user upload 時 apple-touch-icon を JS で差替）
+    icon: null, // Session 267 v4: ホーム画面アイコン（user upload 時 apple-touch-icon を JS で差替）
+    // 井上氏要望: 「次へ進む系」ボタンの背景画像。next1/2/3 = つぎの字（出現1/2/3回目）、doneButton = 最後の「できた！」
+    next1: null,
+    next2: null,
+    next3: null,
+    doneButton: null
   });
   // Session 267 v3: 各画像の位置/拡大縮小調整（character/emoji = transform translate+scale 用）
   let adjustments = $state({
     character: { x: 0, y: 0, scale: 1 },
     emoji: { x: 0, y: 0, scale: 1 },
-    icon: { x: 0, y: 0, scale: 1 }
+    icon: { x: 0, y: 0, scale: 1 },
+    // 着せ替え UI のプレビュー/もどすが参照（調整は使わない）
+    next1: { x: 0, y: 0, scale: 1 },
+    next2: { x: 0, y: 0, scale: 1 },
+    next3: { x: 0, y: 0, scale: 1 },
+    doneButton: { x: 0, y: 0, scale: 1 }
   });
 
   const STORAGE_KEY = 'learning-suite:kanji:assets';
@@ -195,6 +229,9 @@
         const data = JSON.parse(saved);
         if (data.character) assets.character = data.character;
         if (data.emoji) assets.emoji = data.emoji;
+        for (const k of ['next1', 'next2', 'next3', 'doneButton']) {
+          if (data[k]) assets[k] = data[k];
+        }
       }
       const savedAdj = localStorage.getItem(ADJ_KEY);
       if (savedAdj) {
@@ -264,6 +301,8 @@
   }
 
   async function runCountdownThen(action) {
+    // 井上氏要望: カウントダウン中は わくわく系メッセージ（まだ褒めない）
+    emitMsg(CHEER_COUNTDOWN);
     // Session 265: カウントダウン音声は削除（マスター指示）。視覚のみで 3-2-1 表示
     // 数字表示 970ms × 3 = 2.91 秒
     for (let i = 3; i >= 1; i--) {
@@ -346,6 +385,8 @@
     //   ナビが終わっても自動遷移しない。次の字へは右下「つぎの字 →」ボタン操作のみ
     //   児童は最後の動作語を書き終わるまで自分のペースで書字できる
     animationStarted = false;
+    // 書き終わったので やりきったことを称える（祝い色）。ナビから約2呼吸遅らせる
+    setTimeout(() => emitMsg(CHEER_DONE, '#f43f5e'), MSG_DELAY_MS);
   }
 
   function doneAll() {
@@ -449,6 +490,7 @@
                   kanji={k}
                   onRestart={() => startKanji(i)}
                   onNaviDone={() => handleNaviDone(i)}
+                  onStroke={(s, t) => handleStroke(s, t)}
                 />
                 {#if countdown > 0}
                   <div class="countdown-overlay" aria-live="assertive">
@@ -463,11 +505,45 @@
     </div>
 
     <!-- 井上氏指示（2026-05-25）: 1ページ1文字 + 枠外右下ナビボタン -->
+    <!-- 井上氏要望（2026-06-02）: ボタンは丸、文字はボタンの上にホワンホワン浮かせる。
+         つぎの字は出現回数ごと（next1/2/3）、最後は doneButton で別画像 -->
     <div class="page-nav">
       {#if currentIndex < kanjis.length - 1}
-        <button class="btn btn--primary big" onclick={nextKanji}>つぎの字 →</button>
+        <div class="pagenav-wrap">
+          <div class="pagenav-btnbox">
+            <div class="float-layer" aria-hidden="true">
+              {#each floatMsgs as m (m.id)}
+                <span class="float-msg" style:color={m.color}>{m.text}</span>
+              {/each}
+            </div>
+            <button
+              class="btn btn--primary pagenav-circle"
+              class:btn--skinned={nextSkinKey && assets[nextSkinKey]}
+              style:--skin-img={nextSkinKey && assets[nextSkinKey] ? `url("${assets[nextSkinKey]}")` : null}
+              onclick={nextKanji}
+              aria-label="つぎの字"
+            ></button>
+          </div>
+          <span class="pagenav-label pagenav-label--touch">できたらタッチ！</span>
+        </div>
       {:else}
-        <button class="btn btn--primary big" onclick={doneAll}>できた！</button>
+        <div class="pagenav-wrap">
+          <div class="pagenav-btnbox">
+            <div class="float-layer" aria-hidden="true">
+              {#each floatMsgs as m (m.id)}
+                <span class="float-msg" style:color={m.color}>{m.text}</span>
+              {/each}
+            </div>
+            <button
+              class="btn btn--primary pagenav-circle"
+              class:btn--skinned={assets.doneButton}
+              style:--skin-img={assets.doneButton ? `url("${assets.doneButton}")` : null}
+              onclick={doneAll}
+              aria-label="できた！"
+            ></button>
+          </div>
+          <span class="pagenav-label pagenav-label--touch">できた！</span>
+        </div>
       {/if}
     </div>
 
@@ -821,6 +897,70 @@
     right: 1.25rem;
     bottom: 1.25rem;
     z-index: 15;
+  }
+  /* 井上氏要望（2026-06-02）: 丸ボタン + 文字をボタンの上にホワンホワン浮かせる（つぎの字・できた共通） */
+  .pagenav-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  /* 井上氏要望（2026-06-02 改訂）: ボタンから上へ次々フェードしながら昇る応援メッセージ。
+     現在位置（ボタン上端）をスタートに、上方向へ移動しながらフェードイン→アウト。書き順ナビと同期。 */
+  .pagenav-btnbox {
+    position: relative;
+  }
+  .float-layer {
+    position: absolute;
+    left: 50%;
+    bottom: 100%; /* ボタンの上端から上へ */
+    width: 0;
+    pointer-events: none;
+  }
+  .float-msg {
+    position: absolute;
+    left: 0;
+    bottom: 0.3rem;
+    transform: translateX(-50%);
+    font-size: clamp(1rem, 4.5vw, 1.4rem);
+    font-weight: 900;
+    -webkit-text-stroke: 1px #fff;
+    paint-order: stroke fill;
+    text-shadow: 0 0 4px #fff, 0 0 8px #fff, 0 2px 4px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+    animation: float-up 1.7s ease-out forwards;
+  }
+  @keyframes float-up {
+    0% { opacity: 0; transform: translate(-50%, 12px) scale(0.8); }
+    18% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -64px) scale(1.05); }
+  }
+  .pagenav-label {
+    font-size: clamp(1.15rem, 5.5vw, 1.6rem);
+    font-weight: 900;
+    /* 淡い黄色背景になじまないよう、鮮やかな赤＋太い白フチで高コントラスト化 */
+    color: #e11d48;
+    -webkit-text-stroke: 1px #fff;
+    paint-order: stroke fill; /* フチの内側に塗りを残し、文字が痩せないように */
+    text-shadow: 0 0 4px #fff, 0 0 8px #fff, 0 2px 5px rgba(0, 0, 0, 0.35);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  /* ナビボタンのラベル（つぎの字「できたらタッチ！」/ 最後「できた！」共通）:
+     ボタンの下・ゆったり点滅（井上氏要望で最後のページも前ページと同処理に統一） */
+  .pagenav-label.pagenav-label--touch {
+    animation: blink-soft 2.2s ease-in-out infinite;
+  }
+  @keyframes blink-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .pagenav-circle {
+    width: clamp(78px, 22vw, 108px);
+    height: clamp(78px, 22vw, 108px);
+    border-radius: 50%;
+    padding: 0;
+    flex: 0 0 auto;
   }
   /* ページインジケーター（右上「1 / 3」表示） */
   .page-indicator {

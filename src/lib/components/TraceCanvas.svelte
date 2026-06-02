@@ -5,7 +5,7 @@
   // onRestart: 「やりなおし」が押されたら親に通知（スタート相当を発動）
   // active: 現在アクティブか（複数文字横並び時に親が制御。単漢字セットでは true 固定）
   //         false のときは pointer 入力受付なし・opacity を下げる・覚え歌窓を隠す
-  let { kanji, onRestart = () => {}, active = true, onNaviDone = () => {} } = $props();
+  let { kanji, onRestart = () => {}, active = true, onNaviDone = () => {}, onStroke = () => {} } = $props();
 
   let canvas = $state();
   let ctx;
@@ -363,6 +363,8 @@
   function animateStroke(strokeIdx) {
     return new Promise((resolve) => {
       currentStrokeIdx = strokeIdx;
+      // 井上氏要望（2026-06-02）: 書き順ナビと応援メッセージのタイミング同期用に各画の開始を通知
+      onStroke(strokeIdx, kanji.strokes.length);
       // Session 266: 連続する同じ動作語は最初の画だけ音声発火
       const prevFrag = strokeIdx > 0 ? kanji.strokes[strokeIdx - 1].songFragment : null;
       if (kanji.strokes[strokeIdx].songFragment !== prevFrag) {

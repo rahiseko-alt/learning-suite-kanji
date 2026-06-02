@@ -1,6 +1,7 @@
 <script>
   // ユーザーが画像をアップロードして UI を着せ替えできる設定モーダル
   // ボタン立体感は global の .btn / .btn--primary / .btn--secondary / .btn--icon に統一
+  import { resizeImage } from '$lib/image-resize.js';
   let { assets = $bindable(), adjustments = $bindable(), onclose } = $props();
 
   // Session 267 v3: 各 slot に位置・拡大縮小スライダー追加
@@ -21,14 +22,50 @@
       hint: 'スマホのホーム画面に追加したときのアイコン',
       noAdjuster: true,
       defaults: { x: 0, y: 0, scale: 1 }
+    },
+    {
+      // 井上氏要望（2026-06-02）: 「つぎの字」ボタンは出現回数ごとに別画像（最大3回）。
+      key: 'next1', label: 'つぎの字 ①', icon: '1️⃣',
+      hint: '1ばんめの字の あとに でるボタン',
+      noAdjuster: true,
+      defaults: { x: 0, y: 0, scale: 1 }
+    },
+    {
+      key: 'next2', label: 'つぎの字 ②', icon: '2️⃣',
+      hint: '2ばんめの字の あとに でるボタン',
+      noAdjuster: true,
+      defaults: { x: 0, y: 0, scale: 1 }
+    },
+    {
+      key: 'next3', label: 'つぎの字 ③', icon: '3️⃣',
+      hint: '3ばんめの字の あとに でるボタン',
+      noAdjuster: true,
+      defaults: { x: 0, y: 0, scale: 1 }
+    },
+    {
+      // 最後の字のあとに出る「できた！」ボタンの背景画像。文字は残す。
+      key: 'doneButton', label: 'できたボタン', icon: '🆗',
+      hint: 'さいごの字の あとに でる「できた！」のがぞう',
+      noAdjuster: true,
+      defaults: { x: 0, y: 0, scale: 1 }
     }
   ];
 
-  function handleFile(e, key) {
+  async function handleFile(e, key) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       alert('画像ファイルを選んでね');
+      return;
+    }
+    // 次へ進む系ボタン（つぎの字/できた）は小サイズ用途なので 256px に圧縮（localStorage 容量対策）
+    if (['next1', 'next2', 'next3', 'doneButton'].includes(key)) {
+      try {
+        assets[key] = await resizeImage(file, 256);
+      } catch (err) {
+        alert('がぞうを よみこめませんでした');
+      }
+      e.target.value = '';
       return;
     }
     const reader = new FileReader();

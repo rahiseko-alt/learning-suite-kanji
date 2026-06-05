@@ -33,7 +33,6 @@
   let activeKanji = $derived(kanjis[currentIndex] ?? kanjis[0]);
   // 井上氏要望: 「つぎの字」ボタンの出現回数（currentIndex）ごとに別画像。3 回目（4 文字目への遷移）まで対応
   let nextSkinKey = $derived(['next1', 'next2', 'next3'][currentIndex] ?? null);
-  let pausedIdx = $state(-1); // -1=走行中 / 0以上=i番目が pause 中
 
   let phase = $state('start');
   let traceComps = $state([]);
@@ -194,7 +193,8 @@
     next1: { x: 0, y: 0, scale: 1 },
     next2: { x: 0, y: 0, scale: 1 },
     next3: { x: 0, y: 0, scale: 1 },
-    doneButton: { x: 0, y: 0, scale: 1 }
+    doneButton: { x: 0, y: 0, scale: 1 },
+    sensitivity: 30
   });
 
   const STORAGE_KEY = 'learning-suite:kanji:assets';
@@ -362,7 +362,6 @@
     //   ナビが終わっても自動遷移しない。次の字へは右下「つぎの字 →」ボタン操作のみ
     //   児童は最後の動作語を書き終わるまで自分のペースで書字できる
     animationStarted = false;
-    pausedIdx = -1;
   }
 
   function doneAll() {
@@ -466,16 +465,8 @@
                   kanji={k}
                   onRestart={() => startKanji(i)}
                   onNaviDone={() => handleNaviDone(i)}
-                  onPaused={() => { pausedIdx = i }}
+                  sensitivity={adjustments.sensitivity ?? 30}
                 />
-                {#if pausedIdx === i}
-                  <button
-                    class="btn btn--primary kaita-btn"
-                    onclick={() => { traceComps[i].resumeNav(); pausedIdx = -1; }}
-                  >
-                    かいたよ！
-                  </button>
-                {/if}
                 {#if countdown > 0}
                   <div class="countdown-overlay" aria-live="assertive">
                     <div class="countdown-num" bind:this={cdEl}>{countdown}</div>
@@ -881,13 +872,6 @@
   }
   .pagenav-btnbox {
     position: relative;
-  }
-  .kaita-btn {
-    display: block;
-    margin: 12px auto 0;
-    font-size: 1.2rem;
-    padding: 12px 32px;
-    border-radius: 999px;
   }
   .pagenav-label {
     font-size: clamp(1.15rem, 5.5vw, 1.6rem);

@@ -5,7 +5,7 @@
   // onRestart: 「やりなおし」が押されたら親に通知（スタート相当を発動）
   // active: 現在アクティブか（複数文字横並び時に親が制御。単漢字セットでは true 固定）
   //         false のときは pointer 入力受付なし・opacity を下げる・覚え歌窓を隠す
-  let { kanji, onRestart = () => {}, active = true, onNaviDone = () => {}, onPaused = null } = $props();
+  let { kanji, onRestart = () => {}, active = true, onNaviDone = () => {}, onPaused = null, sensitivity = 30 } = $props();
 
   let canvas = $state();
   let ctx;
@@ -26,6 +26,12 @@
   let paused = $state(false);
   let pauseResolver = null;
   let runEpoch = 0; // replayDemo の中断検出用
+  let currentFragmentSamples = [];
+  let childTrace = $state([]);
+  let lastCoverage = $state(null); // null=非表示, 0〜1=バッジ表示中
+
+  const PATH_SAMPLE_STEP = 5;
+  const COVERAGE_DIST_THRESHOLD = 12;
 
   const PEN_WIDTH = 8;
   const PEN_COLOR = '#1e293b';
@@ -178,6 +184,7 @@
     drawing = true;
     lastX = p.x;
     lastY = p.y;
+    childTrace = [];
     ctx.beginPath();
     ctx.arc(p.x, p.y, ctx.lineWidth / 2, 0, Math.PI * 2);
     ctx.fill();
@@ -193,6 +200,7 @@
     ctx.stroke();
     lastX = p.x;
     lastY = p.y;
+    if (paused) childTrace = [...childTrace, canvasToSvg(e.offsetX, e.offsetY)];
   }
 
   function pointerUp(e) {
@@ -200,6 +208,14 @@
     drawing = false;
     if (canvas.hasPointerCapture?.(e.pointerId)) {
       canvas.releasePointerCapture(e.pointerId);
+    }
+    if (paused) {
+      const cov = computeCoverage();
+      lastCoverage = cov;
+      if (cov >= sensitivity / 100) {
+        resumeNav();
+        lastCoverage = null;
+      }
     }
   }
 
@@ -257,6 +273,36 @@
     //   → cancel 後 60ms 待機で確実に切り替え（マスター指摘「ヨコのナビなのにヤマ発話」対策）
     speechSynthesis.cancel();
     setTimeout(() => speechSynthesis.speak(u), 60);
+  }
+
+  function samplePath(d) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    const len = path.getTotalLength();
+    const pts = [];
+    for (let l = 0; l <= len; l += PATH_SAMPLE_STEP) {
+      const p = path.getPointAtLength(l);
+      pts.push({ x: p.x, y: p.y });
+    }
+    return pts;
+  }
+
+  function canvasToSvg(x, y) {
+    const [, , vw, vh] = (kanji.viewBox || '0 0 109 109').split(' ').map(Number);
+    const rect = canvas.getBoundingClientRect();
+    return { x: (x / rect.width) * vw, y: (y / rect.height) * vh };
+  }
+
+  function computeCoverage() {
+    if (!currentFragmentSamples.length || !childTrace.length) return 0;
+    let covered = 0;
+    for (const sp of currentFragmentSamples) {
+      for (const ct of childTrace) {
+        const dx = ct.x - sp.x, dy = ct.y - sp.y;
+        if (Math.sqrt(dx * dx + dy * dy) < COVERAGE_DIST_THRESHOLD) { covered++; break; }
+      }
+    }
+    return covered / currentFragmentSamples.length;
   }
 
   export function resumeNav() {
@@ -319,6 +365,10 @@
       const nextStrokeIsNewFragment = !isLast &&
         kanji.strokes[strokeIdx].songFragment !== kanji.strokes[strokeIdx + 1].songFragment;
       if (nextStrokeIsNewFragment) {
+        const curFrag = kanji.strokes[strokeIdx].songFragment;
+        const fragStrokes = kanji.strokes.filter(s => s.songFragment === curFrag);
+        currentFragmentSamples = fragStrokes.flatMap(s => samplePath(s.d));
+        childTrace = [];
         paused = true;
         onPaused?.();
         if (typeof window !== 'undefined') speechSynthesis.cancel();
@@ -393,6 +443,10 @@
       onpointerleave={pointerUp}
       oncontextmenu={(e) => e.preventDefault()}
     ></canvas>
+
+    {#if lastCoverage !== null}
+      <div class="coverage-badge">{Math.round(lastCoverage * 100)}%</div>
+    {/if}
   </div>
 
   <!-- 覚え歌（PDF 準拠・別カラム縦スライド・現在の画を中央表示） -->
@@ -535,4 +589,19 @@
 
   /* Session 266 v3: マスター指示「書いている時も書いていない時も書き終わった後も同じ枠の大きさ・同じ見え方」
      → .trace-wrap.inactive の opacity / pointer-events / display: none を全削除（見た目の差別化を撤回） */
+
+  .coverage-badge {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    background: rgba(0, 0, 0, 0.62);
+    color: #fff;
+    font-size: 0.72rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    pointer-events: none;
+    z-index: 10;
+    line-height: 1.4;
+  }
 </style>

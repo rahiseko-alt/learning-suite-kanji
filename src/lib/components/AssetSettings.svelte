@@ -155,6 +155,28 @@
       {/each}
     </div>
 
+    <section class="sensitivity-section">
+      <div class="sens-head">
+        <span class="sens-icon">✍️</span>
+        <div>
+          <div class="sens-label">書き認定の感度</div>
+          <div class="sens-hint">書いたと認めるきびしさ（数字が大きいほど厳しい）</div>
+        </div>
+        <span class="sens-val">{adjustments.sensitivity ?? 30}<span class="sens-unit">/100</span></span>
+      </div>
+      <input
+        type="range"
+        min="1"
+        max="100"
+        step="1"
+        bind:value={adjustments.sensitivity}
+        class="sens-slider"
+      />
+      <div class="sens-hint-row">
+        <span>甘い（1）</span><span>厳しい（100）</span>
+      </div>
+    </section>
+
     <button class="btn btn--primary big done-full" onclick={onclose}>✨ できた</button>
   </div>
 </div>
@@ -310,6 +332,59 @@
   .done-full {
     width: 100%;
     margin-top: 1rem;
+  }
+
+  .sensitivity-section {
+    background: linear-gradient(180deg, #f0f9ff, #e0f2fe);
+    border: 2px solid #bae6fd;
+    border-radius: 1rem;
+    padding: 0.9rem;
+    margin-top: 1rem;
+  }
+  .sens-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.7rem;
+  }
+  .sens-icon {
+    font-size: 1.6rem;
+    flex-shrink: 0;
+  }
+  .sens-label {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1f2937;
+  }
+  .sens-hint {
+    font-size: 0.78rem;
+    color: #64748b;
+  }
+  .sens-val {
+    margin-left: auto;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0369a1;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .sens-unit {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-left: 1px;
+  }
+  .sens-slider {
+    width: 100%;
+    accent-color: #0ea5e9;
+    margin-bottom: 0.3rem;
+  }
+  .sens-hint-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    padding: 0 2px;
   }
 
   @keyframes fadeIn {

@@ -160,7 +160,7 @@
 
   <!-- 縦一覧セット選択（押下後に出現） -->
   {#if listVisible}
-    <div class="set-list">
+    <div class="set-list-card">
       {#each SET_ORDER as id}
         {@const s = SETS[id]}
         <button
@@ -189,7 +189,7 @@
 <style>
   .page {
     position: relative;
-    min-height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     background: radial-gradient(circle at 30% 20%, #fef9c3 0%, #fef3c7 60%, #fde68a 100%);
     display: flex;
@@ -310,18 +310,27 @@
     50%      { box-shadow: inset 0 -5px 0 rgba(146, 64, 14, 0.18), 0 7px 0 #c2750c, 0 10px 18px rgba(194, 117, 12, 0.3), 0 0 0 18px rgba(251, 191, 36, 0); }
   }
 
-  /* === 縦一覧セット選択 === */
-  .set-list {
+  /* === 縦一覧セット選択（カード内スクロール形式） === */
+  .set-list-card {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    width: 100%;
+    max-width: 480px;
+    margin: 16px auto 0;
+    background: #FDFBF7;
+    border-radius: 0.8rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8);
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    max-width: 480px;
-    width: 100%;
-    margin: 16px auto 0;
-    padding: 0 16px;
+    gap: 0;
+    padding: 8px 16px;
     position: relative;
     z-index: 2;
   }
+  .set-list-card::-webkit-scrollbar { width: 6px; }
+  .set-list-card::-webkit-scrollbar-track { background: rgba(245,240,230,0.5); border-radius: 4px; }
+  .set-list-card::-webkit-scrollbar-thumb { background: rgba(100,100,100,0.3); border-radius: 4px; }
 
   .set-card {
     display: flex;
@@ -371,6 +380,7 @@
     position: relative;
     z-index: 2;
     margin-top: 1.5rem;
+    flex-shrink: 0;
     animation: fadeUp 0.4s ease-out, start-pulse 1.6s ease-in-out 0.4s infinite;
   }
   @keyframes start-pulse {

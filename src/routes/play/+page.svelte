@@ -6,7 +6,6 @@
   import TraceCanvas from '$lib/components/TraceCanvas.svelte';
   import AssetSettings from '$lib/components/AssetSettings.svelte';
   import { SETS, getSetById } from '$lib/data/sets.js';
-  import { CHEER_COUNTDOWN, CHEER_WRITING, CHEER_ALMOST, CHEER_DONE } from '$lib/cheers.js';
 
   // Session 267 v5: 複数 sets= 対応（カンマ区切り）/ 単数 ?set= 互換も維持
   let rawSetIds = $derived(
@@ -34,27 +33,7 @@
   let activeKanji = $derived(kanjis[currentIndex] ?? kanjis[0]);
   // 井上氏要望: 「つぎの字」ボタンの出現回数（currentIndex）ごとに別画像。3 回目（4 文字目への遷移）まで対応
   let nextSkinKey = $derived(['next1', 'next2', 'next3'][currentIndex] ?? null);
-  // 井上氏要望（2026-06-02 改訂）: ボタンから上へフェードしながら次々に出る応援メッセージ。
-  //   フェーズ同期（カウントダウン→書いてる途中→もうすぐ終わる→できた）。開始前は何も出さない。
-  let floatMsgs = $state([]);
-  let msgSeq = 0;
-  // 井上氏指摘（2026-06-02）: ナビと同時だと早い。約2呼吸（2秒）遅らせて出す
-  const MSG_DELAY_MS = 2000;
-  function emitMsg(pool, color = '#0ea5e9') {
-    const text = pool[Math.floor(Math.random() * pool.length)];
-    const id = ++msgSeq;
-    floatMsgs = [...floatMsgs, { id, text, color }];
-    // 1.7s のフロートアニメ終了で消す
-    setTimeout(() => { floatMsgs = floatMsgs.filter((m) => m.id !== id); }, 1700);
-  }
-  // 書き順ナビの各画開始に同期（最後の画は「もうすぐ終わる」系）。約2呼吸遅らせる
-  function handleStroke(strokeIdx, total) {
-    const isLast = strokeIdx >= total - 1;
-    setTimeout(
-      () => emitMsg(isLast ? CHEER_ALMOST : CHEER_WRITING, isLast ? '#f59e0b' : '#0ea5e9'),
-      MSG_DELAY_MS
-    );
-  }
+  let pausedIdx = $state(-1); // -1=走行中 / 0以上=i番目が pause 中
 
   let phase = $state('start');
   let traceComps = $state([]);
@@ -301,8 +280,6 @@
   }
 
   async function runCountdownThen(action) {
-    // 井上氏要望: カウントダウン中は わくわく系メッセージ（まだ褒めない）
-    emitMsg(CHEER_COUNTDOWN);
     // Session 265: カウントダウン音声は削除（マスター指示）。視覚のみで 3-2-1 表示
     // 数字表示 970ms × 3 = 2.91 秒
     for (let i = 3; i >= 1; i--) {
@@ -385,8 +362,7 @@
     //   ナビが終わっても自動遷移しない。次の字へは右下「つぎの字 →」ボタン操作のみ
     //   児童は最後の動作語を書き終わるまで自分のペースで書字できる
     animationStarted = false;
-    // 書き終わったので やりきったことを称える（祝い色）。ナビから約2呼吸遅らせる
-    setTimeout(() => emitMsg(CHEER_DONE, '#f43f5e'), MSG_DELAY_MS);
+    pausedIdx = -1;
   }
 
   function doneAll() {
@@ -490,8 +466,16 @@
                   kanji={k}
                   onRestart={() => startKanji(i)}
                   onNaviDone={() => handleNaviDone(i)}
-                  onStroke={(s, t) => handleStroke(s, t)}
+                  onPaused={() => { pausedIdx = i }}
                 />
+                {#if pausedIdx === i}
+                  <button
+                    class="btn btn--primary kaita-btn"
+                    onclick={() => { traceComps[i].resumeNav(); pausedIdx = -1; }}
+                  >
+                    かいたよ！
+                  </button>
+                {/if}
                 {#if countdown > 0}
                   <div class="countdown-overlay" aria-live="assertive">
                     <div class="countdown-num" bind:this={cdEl}>{countdown}</div>
@@ -511,11 +495,6 @@
       {#if currentIndex < kanjis.length - 1}
         <div class="pagenav-wrap">
           <div class="pagenav-btnbox">
-            <div class="float-layer" aria-hidden="true">
-              {#each floatMsgs as m (m.id)}
-                <span class="float-msg" style:color={m.color}>{m.text}</span>
-              {/each}
-            </div>
             <button
               class="btn btn--primary pagenav-circle"
               class:btn--skinned={nextSkinKey && assets[nextSkinKey]}
@@ -529,11 +508,6 @@
       {:else}
         <div class="pagenav-wrap">
           <div class="pagenav-btnbox">
-            <div class="float-layer" aria-hidden="true">
-              {#each floatMsgs as m (m.id)}
-                <span class="float-msg" style:color={m.color}>{m.text}</span>
-              {/each}
-            </div>
             <button
               class="btn btn--primary pagenav-circle"
               class:btn--skinned={assets.doneButton}
@@ -905,35 +879,15 @@
     align-items: center;
     gap: 0.35rem;
   }
-  /* 井上氏要望（2026-06-02 改訂）: ボタンから上へ次々フェードしながら昇る応援メッセージ。
-     現在位置（ボタン上端）をスタートに、上方向へ移動しながらフェードイン→アウト。書き順ナビと同期。 */
   .pagenav-btnbox {
     position: relative;
   }
-  .float-layer {
-    position: absolute;
-    left: 50%;
-    bottom: 100%; /* ボタンの上端から上へ */
-    width: 0;
-    pointer-events: none;
-  }
-  .float-msg {
-    position: absolute;
-    left: 0;
-    bottom: 0.3rem;
-    transform: translateX(-50%);
-    font-size: clamp(1rem, 4.5vw, 1.4rem);
-    font-weight: 900;
-    -webkit-text-stroke: 1px #fff;
-    paint-order: stroke fill;
-    text-shadow: 0 0 4px #fff, 0 0 8px #fff, 0 2px 4px rgba(0, 0, 0, 0.25);
-    white-space: nowrap;
-    animation: float-up 1.7s ease-out forwards;
-  }
-  @keyframes float-up {
-    0% { opacity: 0; transform: translate(-50%, 12px) scale(0.8); }
-    18% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-    100% { opacity: 0; transform: translate(-50%, -64px) scale(1.05); }
+  .kaita-btn {
+    display: block;
+    margin: 12px auto 0;
+    font-size: 1.2rem;
+    padding: 12px 32px;
+    border-radius: 999px;
   }
   .pagenav-label {
     font-size: clamp(1.15rem, 5.5vw, 1.6rem);

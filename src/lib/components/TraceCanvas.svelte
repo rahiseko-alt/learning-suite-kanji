@@ -26,9 +26,8 @@
   let paused = $state(false);
   let pauseResolver = null;
   let runEpoch = 0; // replayDemo の中断検出用
-  let currentFragmentLength = 0;
-  let lastStrokeLength = 0;   // 現フラグメントの最後の画のパス長
-  let lastStrokeMode = false; // true = 次の pointerDown で即 resume
+  let lastFragStrokeCount = 0; // 現フラグメントの総画数（pause 開始時に設定）
+  let fragStrokeDown = 0;      // pause 開始後の pointerDown 回数
   let childTrace = $state([]);
 
   const PEN_WIDTH = 8;
@@ -187,13 +186,12 @@
     ctx.arc(p.x, p.y, ctx.lineWidth / 2, 0, Math.PI * 2);
     ctx.fill();
     // 最後の一画に着手した瞬間 → 次フラグメントのナビを開始
-    // 1画フラグメント(preLast=0): 最初の pointerDown で即 resume
-    // 複数画フラグメント: lastStrokeMode=true になってから resume
+    // fragStrokeDown が lastFragStrokeCount に達した = 最後の画に着手
     if (paused) {
-      const preLast = currentFragmentLength - lastStrokeLength;
-      if (lastStrokeMode || preLast <= 0) {
+      fragStrokeDown++;
+      if (fragStrokeDown >= lastFragStrokeCount) {
         resumeNav();
-        lastStrokeMode = false;
+        fragStrokeDown = 0;
       }
     }
   }
@@ -217,17 +215,7 @@
     if (canvas.hasPointerCapture?.(e.pointerId)) {
       canvas.releasePointerCapture(e.pointerId);
     }
-    if (paused && !lastStrokeMode) {
-      const preLast = currentFragmentLength - lastStrokeLength;
-      if (preLast > 0) {
-        // 複数画フラグメント: 最後の一画以外を書ききったら lastStrokeMode=true
-        // → 次の pointerDown（最後の一画着手）で resumeNav
-        const dist = computeChildDistance();
-        if (dist >= preLast) {
-          lastStrokeMode = true;
-        }
-      }
-    }
+    // 筆数カウント方式のため pointerUp での距離判定は不要
   }
 
   function clearAll() {
@@ -245,7 +233,7 @@
       animFrameId = null;
     }
     paused = false;
-    lastStrokeMode = false;
+    fragStrokeDown = 0;
     if (pauseResolver) { pauseResolver(); pauseResolver = null; }
     // 3. ボイス停止
     if (typeof window !== 'undefined') {
@@ -371,15 +359,8 @@
           fragStart--;
         }
         const fragStrokes = kanji.strokes.slice(fragStart, strokeIdx + 1);
-        currentFragmentLength = fragStrokes.reduce((sum, s) => {
-          const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          p.setAttribute('d', s.d);
-          return sum + p.getTotalLength();
-        }, 0);
-        const lsEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        lsEl.setAttribute('d', fragStrokes[fragStrokes.length - 1].d);
-        lastStrokeLength = lsEl.getTotalLength();
-        lastStrokeMode = false;
+        lastFragStrokeCount = fragStrokes.length; // 最後の一画着手でナビ発火
+        fragStrokeDown = 0;
         childTrace = [];
         paused = true;
         onPaused?.();

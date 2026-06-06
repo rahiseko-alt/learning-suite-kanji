@@ -22,8 +22,6 @@
   let showSettings = $state(false);
 
   let sortMode = $state('default');
-  let viewMode = $state('card');
-  let showOnlySaved = $state(false);
   let savedSetIds = $state([]);
 
   // ユーザーカスタマイズ可能アセット（play 画面と同一 STORAGE_KEY で共有）
@@ -110,7 +108,7 @@
 
   let displaySets = $derived.by(() => {
     let sets = SET_ORDER.map(id => SETS[id]);
-    if (showOnlySaved) sets = sets.filter(s => savedSetIds.includes(s.id));
+    if (sortMode === 'saved')  sets = sets.filter(s => savedSetIds.includes(s.id));
     if (sortMode === 'stroke') sets = [...sets].sort((a, b) => totalStrokes(a) - totalStrokes(b));
     if (sortMode === 'aiueo')  sets = [...sets].sort((a, b) => getReading(a).localeCompare(getReading(b), 'ja'));
     return sets;
@@ -187,53 +185,28 @@
   <!-- 縦一覧セット選択（押下後に出現） -->
   {#if listVisible}
     <div class="filter-bar">
-      <div class="sort-tabs">
-        <button class="sort-tab" class:active={sortMode==='default'} onclick={() => sortMode='default'}>順番</button>
-        <button class="sort-tab" class:active={sortMode==='stroke'} onclick={() => sortMode='stroke'}>画数↑</button>
-        <button class="sort-tab" class:active={sortMode==='aiueo'}  onclick={() => sortMode='aiueo'}>あいうえお</button>
-      </div>
-      <div class="filter-right">
-        <button class="view-toggle" onclick={() => viewMode = viewMode==='card' ? 'grid' : 'card'}>
-          {viewMode === 'card' ? '⊞' : '☰'}
-        </button>
-        <button class="saved-filter" class:active={showOnlySaved} onclick={() => showOnlySaved = !showOnlySaved}>
-          ⭐ 保存済み
-        </button>
-      </div>
+      <button class="filter-tab" class:active={sortMode==='default'} onclick={() => sortMode='default'}>一覧</button>
+      <button class="filter-tab" class:active={sortMode==='stroke'} onclick={() => sortMode='stroke'}>画数↑</button>
+      <button class="filter-tab" class:active={sortMode==='aiueo'}  onclick={() => sortMode='aiueo'}>あいうえお</button>
+      <button class="filter-tab" class:active={sortMode==='saved'}  onclick={() => sortMode='saved'}>⭐保存</button>
     </div>
 
     <div class="set-list-card">
-      {#if viewMode === 'card'}
+      <div class="set-grid">
         {#each displaySets as s}
-          <div class="set-row">
-            <button class="set-card" class:selected={selectedIds.includes(s.id)} onclick={() => toggleSelect(s.id)}>
-              <span class="set-kanji">{s.name}</span>
-              <span class="set-label">{s.label}</span>
+          <div class="set-tile" class:selected={selectedIds.includes(s.id)}>
+            <button class="tile-main" onclick={() => toggleSelect(s.id)}>
+              <span class="tile-kanji">{s.name}</span>
+              <span class="tile-strokes">{totalStrokes(s)}画</span>
             </button>
-            <button class="save-btn" class:saved={savedSetIds.includes(s.id)}
-                    onclick={(e) => handleToggleSave(e, s.id)} aria-label="保存">
+            <button class="tile-save" class:saved={savedSetIds.includes(s.id)}
+                    onclick={(e) => handleToggleSave(e, s.id)}>
               {savedSetIds.includes(s.id) ? '★' : '☆'}
             </button>
           </div>
         {/each}
-      {:else}
-        <div class="set-grid">
-          {#each displaySets as s}
-            <div class="set-tile" class:selected={selectedIds.includes(s.id)}>
-              <button class="tile-main" onclick={() => toggleSelect(s.id)}>
-                <span class="tile-kanji">{s.name}</span>
-                <span class="tile-strokes">{totalStrokes(s)}画</span>
-              </button>
-              <button class="tile-save" class:saved={savedSetIds.includes(s.id)}
-                      onclick={(e) => handleToggleSave(e, s.id)}>
-                {savedSetIds.includes(s.id) ? '★' : '☆'}
-              </button>
-            </div>
-          {/each}
-        </div>
-      {/if}
-
-      {#if showOnlySaved && displaySets.length === 0}
+      </div>
+      {#if sortMode === 'saved' && displaySets.length === 0}
         <p class="empty-saved">まだ ☆ していないよ</p>
       {/if}
     </div>
@@ -520,13 +493,10 @@
     z-index: 4;
   }
 
-  /* === フィルタバー === */
+  /* === フィルタバー（4タブ均等） === */
   .filter-bar {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0 0.25rem;
+    gap: 6px;
     margin-top: 12px;
     width: 100%;
     max-width: 480px;
@@ -534,67 +504,32 @@
     position: relative;
     z-index: 2;
   }
-  .sort-tabs { display: flex; gap: 0.25rem; }
-  .sort-tab {
+  .filter-tab {
+    flex: 1;
     font-family: inherit;
-    font-weight: 700;
-    font-size: 0.82rem;
-    padding: 0.4rem 0.75rem;
-    border-radius: 999px;
-    border: 2px solid #e2e8f0;
+    font-weight: 800;
+    font-size: 1.1rem;
+    padding: 0;
+    min-height: 4.5rem;
+    border-radius: 14px;
+    border: 2.5px solid #e2e8f0;
     background: #fff;
     color: #64748b;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-  }
-  .sort-tab.active { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
-  .filter-right { display: flex; gap: 0.4rem; align-items: center; }
-  .view-toggle {
-    font-family: inherit;
-    font-size: 0.82rem;
-    font-weight: 700;
-    padding: 0.4rem 0.75rem;
-    border-radius: 999px;
-    border: 2px solid #e2e8f0;
-    background: #fff;
-    color: #475569;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .saved-filter {
-    font-family: inherit;
-    font-size: 0.82rem;
-    font-weight: 700;
-    padding: 0.4rem 0.75rem;
-    border-radius: 999px;
-    border: 2px solid #fde68a;
-    background: #fff;
-    color: #92400e;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .saved-filter.active { background: #fef3c7; border-color: #fbbf24; }
-
-  /* === カード表示 (set-row) === */
-  .set-row { display: flex; align-items: center; gap: 6px; }
-  .set-row .set-card { flex: 1; }
-  .save-btn {
-    flex-shrink: 0;
-    font-size: 1.3rem;
-    width: 2.4rem;
-    height: 2.4rem;
-    border-radius: 50%;
-    border: 2px solid #fbbf24;
-    background: #fff;
-    color: #fbbf24;
-    opacity: 0.35;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    -webkit-tap-highlight-color: transparent;
+    text-align: center;
+    line-height: 1.2;
   }
-  .save-btn.saved { opacity: 1; background: #fffbeb; }
+  .filter-tab.active {
+    border-color: #6366f1;
+    background: #eef2ff;
+    color: #4338ca;
+  }
+  .filter-tab:last-child { border-color: #fde68a; color: #92400e; }
+  .filter-tab:last-child.active { background: #fef3c7; border-color: #fbbf24; color: #92400e; }
 
   /* === グリッド表示 === */
   .set-grid {

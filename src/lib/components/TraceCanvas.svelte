@@ -433,11 +433,6 @@
         {/if}
       {/each}
 
-      {#if paused}
-        {#each currentFragmentSamples as pt}
-          <circle cx={pt.x} cy={pt.y} r="1.8" class="debug-pt" />
-        {/each}
-      {/if}
     </svg>
 
     <canvas

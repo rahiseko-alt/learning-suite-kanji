@@ -160,7 +160,6 @@
         <span class="sens-icon">✍️</span>
         <div>
           <div class="sens-label">書き認定の感度</div>
-          <div class="sens-hint">書いたと認めるきびしさ（数字が大きいほど厳しい）</div>
         </div>
         <span class="sens-val">{adjustments.sensitivity ?? 30}<span class="sens-unit">/100</span></span>
       </div>
@@ -173,7 +172,7 @@
         class="sens-slider"
       />
       <div class="sens-hint-row">
-        <span>甘い（1）</span><span>厳しい（100）</span>
+        <span>甘い</span><span>厳しい</span>
       </div>
     </section>
 
@@ -382,8 +381,8 @@
   .sens-hint-row {
     display: flex;
     justify-content: space-between;
-    font-size: 0.72rem;
-    color: #94a3b8;
+    font-size: 1.44rem;
+    color: #1f2937;
     padding: 0 2px;
   }
 

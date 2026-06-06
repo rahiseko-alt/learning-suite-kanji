@@ -432,6 +432,12 @@
           </text>
         {/if}
       {/each}
+
+      {#if paused}
+        {#each currentFragmentSamples as pt}
+          <circle cx={pt.x} cy={pt.y} r="1.8" class="debug-pt" />
+        {/each}
+      {/if}
     </svg>
 
     <canvas
@@ -444,9 +450,6 @@
       oncontextmenu={(e) => e.preventDefault()}
     ></canvas>
 
-    {#if lastCoverage !== null}
-      <div class="coverage-badge">{Math.round(lastCoverage * 100)}%</div>
-    {/if}
   </div>
 
   <!-- 覚え歌（PDF 準拠・別カラム縦スライド・現在の画を中央表示） -->
@@ -589,6 +592,12 @@
 
   /* Session 266 v3: マスター指示「書いている時も書いていない時も書き終わった後も同じ枠の大きさ・同じ見え方」
      → .trace-wrap.inactive の opacity / pointer-events / display: none を全削除（見た目の差別化を撤回） */
+
+  .debug-pt {
+    fill: #ef4444;
+    opacity: 0.75;
+    pointer-events: none;
+  }
 
   .coverage-badge {
     position: absolute;

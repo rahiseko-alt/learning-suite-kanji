@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
   import { SETS, SET_ORDER } from '$lib/data/sets.js';
+  import { loadSavedSets, toggleSavedSet } from '$lib/utils/savedSets.js';
   import AssetSettings from '$lib/components/AssetSettings.svelte';
   import { onMount } from 'svelte';
 
@@ -19,6 +20,11 @@
   let listVisible = $state(false);
   let selectedIds = $state([]);
   let showSettings = $state(false);
+
+  let sortMode = $state('default');
+  let viewMode = $state('card');
+  let showOnlySaved = $state(false);
+  let savedSetIds = $state([]);
 
   // ユーザーカスタマイズ可能アセット（play 画面と同一 STORAGE_KEY で共有）
   let assets = $state({
@@ -65,6 +71,7 @@
         }
       }
     } catch (e) {}
+    savedSetIds = loadSavedSets();
   });
 
   // user upload icon があれば apple-touch-icon を動的に差し替え（play 画面と同様）
@@ -89,6 +96,25 @@
     saveAssets();
     showSettings = false;
   }
+
+  function handleToggleSave(e, id) {
+    e.stopPropagation();
+    savedSetIds = toggleSavedSet(id);
+  }
+  function totalStrokes(set) {
+    return set.kanji.reduce((sum, k) => sum + k.strokeCount, 0);
+  }
+  function getReading(set) {
+    return set.reading || set.kanji[0]?.reading || '';
+  }
+
+  let displaySets = $derived.by(() => {
+    let sets = SET_ORDER.map(id => SETS[id]);
+    if (showOnlySaved) sets = sets.filter(s => savedSetIds.includes(s.id));
+    if (sortMode === 'stroke') sets = [...sets].sort((a, b) => totalStrokes(a) - totalStrokes(b));
+    if (sortMode === 'aiueo')  sets = [...sets].sort((a, b) => getReading(a).localeCompare(getReading(b), 'ja'));
+    return sets;
+  });
 
   onMount(() => {
     setTimeout(() => { titleVisible = true; }, 80);
@@ -160,18 +186,56 @@
 
   <!-- 縦一覧セット選択（押下後に出現） -->
   {#if listVisible}
-    <div class="set-list-card">
-      {#each SET_ORDER as id}
-        {@const s = SETS[id]}
-        <button
-          class="set-card"
-          class:selected={selectedIds.includes(id)}
-          onclick={() => toggleSelect(id)}
-        >
-          <span class="set-kanji">{s.name}</span>
-          <span class="set-label">{s.label}</span>
+    <div class="filter-bar">
+      <div class="sort-tabs">
+        <button class="sort-tab" class:active={sortMode==='default'} onclick={() => sortMode='default'}>順番</button>
+        <button class="sort-tab" class:active={sortMode==='stroke'} onclick={() => sortMode='stroke'}>画数↑</button>
+        <button class="sort-tab" class:active={sortMode==='aiueo'}  onclick={() => sortMode='aiueo'}>あいうえお</button>
+      </div>
+      <div class="filter-right">
+        <button class="view-toggle" onclick={() => viewMode = viewMode==='card' ? 'grid' : 'card'}>
+          {viewMode === 'card' ? '⊞' : '☰'}
         </button>
-      {/each}
+        <button class="saved-filter" class:active={showOnlySaved} onclick={() => showOnlySaved = !showOnlySaved}>
+          ⭐ 保存済み
+        </button>
+      </div>
+    </div>
+
+    <div class="set-list-card">
+      {#if viewMode === 'card'}
+        {#each displaySets as s}
+          <div class="set-row">
+            <button class="set-card" class:selected={selectedIds.includes(s.id)} onclick={() => toggleSelect(s.id)}>
+              <span class="set-kanji">{s.name}</span>
+              <span class="set-label">{s.label}</span>
+            </button>
+            <button class="save-btn" class:saved={savedSetIds.includes(s.id)}
+                    onclick={(e) => handleToggleSave(e, s.id)} aria-label="保存">
+              {savedSetIds.includes(s.id) ? '★' : '☆'}
+            </button>
+          </div>
+        {/each}
+      {:else}
+        <div class="set-grid">
+          {#each displaySets as s}
+            <div class="set-tile" class:selected={selectedIds.includes(s.id)}>
+              <button class="tile-main" onclick={() => toggleSelect(s.id)}>
+                <span class="tile-kanji">{s.name}</span>
+                <span class="tile-strokes">{totalStrokes(s)}画</span>
+              </button>
+              <button class="tile-save" class:saved={savedSetIds.includes(s.id)}
+                      onclick={(e) => handleToggleSave(e, s.id)}>
+                {savedSetIds.includes(s.id) ? '★' : '☆'}
+              </button>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      {#if showOnlySaved && displaySets.length === 0}
+        <p class="empty-saved">まだ ☆ していないよ</p>
+      {/if}
     </div>
 
     {#if selectedIds.length > 0}
@@ -317,7 +381,7 @@
     overflow-y: auto;
     width: 100%;
     max-width: 480px;
-    margin: 16px auto 0;
+    margin: 6px auto 0;
     background: #FDFBF7;
     border-radius: 0.8rem;
     box-shadow: 0 4px 20px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8);
@@ -454,5 +518,132 @@
     top: 0.7rem;
     left: 0.7rem;
     z-index: 4;
+  }
+
+  /* === フィルタバー === */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0 0.25rem;
+    margin-top: 12px;
+    width: 100%;
+    max-width: 480px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+  .sort-tabs { display: flex; gap: 0.25rem; }
+  .sort-tab {
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 2px solid #e2e8f0;
+    background: #fff;
+    color: #64748b;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sort-tab.active { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+  .filter-right { display: flex; gap: 0.4rem; align-items: center; }
+  .view-toggle {
+    font-family: inherit;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.5rem;
+    border: 2px solid #e2e8f0;
+    background: #fff;
+    color: #475569;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .saved-filter {
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 2px solid #fde68a;
+    background: #fff;
+    color: #92400e;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .saved-filter.active { background: #fef3c7; border-color: #fbbf24; }
+
+  /* === カード表示 (set-row) === */
+  .set-row { display: flex; align-items: center; gap: 6px; }
+  .set-row .set-card { flex: 1; }
+  .save-btn {
+    flex-shrink: 0;
+    font-size: 1.3rem;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 50%;
+    border: 2px solid #e2e8f0;
+    background: #fff;
+    color: #cbd5e1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .save-btn.saved { color: #fbbf24; border-color: #fde68a; background: #fffbeb; }
+
+  /* === グリッド表示 === */
+  .set-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 4px 0;
+  }
+  .set-tile {
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .set-tile.selected { border-color: #6366f1; background: #eef2ff; }
+  .tile-main {
+    flex: 1;
+    padding: 0.6rem 0.3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tile-kanji { font-size: 1.1rem; font-weight: 900; color: #1e293b; }
+  .tile-strokes { font-size: 0.65rem; color: #94a3b8; font-weight: 600; }
+  .tile-save {
+    border: none;
+    border-top: 1px solid #f1f5f9;
+    background: transparent;
+    color: #cbd5e1;
+    font-size: 0.85rem;
+    padding: 0.2rem;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tile-save.saved { color: #fbbf24; background: #fffbeb; }
+
+  .empty-saved {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 1rem;
+    padding: 2rem 0;
   }
 </style>

@@ -27,6 +27,8 @@
   let pauseResolver = null;
   let runEpoch = 0; // replayDemo の中断検出用
   let currentFragmentLength = 0;
+  let lastStrokeLength = 0;   // 現フラグメントの最後の画のパス長
+  let lastStrokeMode = false; // true = 次の pointerDown で即 resume
   let childTrace = $state([]);
 
   const PEN_WIDTH = 8;
@@ -184,6 +186,11 @@
     ctx.beginPath();
     ctx.arc(p.x, p.y, ctx.lineWidth / 2, 0, Math.PI * 2);
     ctx.fill();
+    // 最後の一画に着手した瞬間 → 次フラグメントのナビを開始
+    if (paused && lastStrokeMode) {
+      resumeNav();
+      lastStrokeMode = false;
+    }
   }
 
   function pointerMove(e) {
@@ -205,10 +212,17 @@
     if (canvas.hasPointerCapture?.(e.pointerId)) {
       canvas.releasePointerCapture(e.pointerId);
     }
-    if (paused) {
-      if (currentFragmentLength > 0 &&
-          computeChildDistance() >= currentFragmentLength * (sensitivity / 100)) {
-        resumeNav();
+    if (paused && !lastStrokeMode) {
+      const preLast = currentFragmentLength - lastStrokeLength;
+      const dist = computeChildDistance();
+      if (preLast <= 0) {
+        // 1画フラグメント: sensitivity 判定でこの画を「書いた」と認識
+        if (currentFragmentLength > 0 && dist >= currentFragmentLength * (sensitivity / 100)) {
+          lastStrokeMode = true;
+        }
+      } else if (dist >= preLast) {
+        // 最後の一画以外を書き終えた → 次の pointerDown で即 resume
+        lastStrokeMode = true;
       }
     }
   }
@@ -228,6 +242,7 @@
       animFrameId = null;
     }
     paused = false;
+    lastStrokeMode = false;
     if (pauseResolver) { pauseResolver(); pauseResolver = null; }
     // 3. ボイス停止
     if (typeof window !== 'undefined') {
@@ -358,6 +373,10 @@
           p.setAttribute('d', s.d);
           return sum + p.getTotalLength();
         }, 0);
+        const lsEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        lsEl.setAttribute('d', fragStrokes[fragStrokes.length - 1].d);
+        lastStrokeLength = lsEl.getTotalLength();
+        lastStrokeMode = false;
         childTrace = [];
         paused = true;
         onPaused?.();

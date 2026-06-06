@@ -26,12 +26,8 @@
   let paused = $state(false);
   let pauseResolver = null;
   let runEpoch = 0; // replayDemo の中断検出用
-  let currentFragmentSamples = [];
+  let currentFragmentLength = 0;
   let childTrace = $state([]);
-  let lastCoverage = $state(null); // null=非表示, 0〜1=バッジ表示中
-
-  const PATH_SAMPLE_STEP = 5;
-  const COVERAGE_DIST_THRESHOLD = 12;
 
   const PEN_WIDTH = 8;
   const PEN_COLOR = '#1e293b';
@@ -178,13 +174,13 @@
 
   function pointerDown(e) {
     // Session 266 v3: 全枠で書字可能（マスター指示「同じ見え方」）→ active チェックを撤回
+    // childTrace は pause 開始時のみリセット（同フラグメント内で複数筆使えるよう累積）
     e.preventDefault();
     canvas.setPointerCapture?.(e.pointerId);
     const p = getPos(e);
     drawing = true;
     lastX = p.x;
     lastY = p.y;
-    childTrace = [];
     ctx.beginPath();
     ctx.arc(p.x, p.y, ctx.lineWidth / 2, 0, Math.PI * 2);
     ctx.fill();
@@ -210,11 +206,9 @@
       canvas.releasePointerCapture(e.pointerId);
     }
     if (paused) {
-      const cov = computeCoverage();
-      lastCoverage = cov;
-      if (cov >= sensitivity / 100) {
+      if (currentFragmentLength > 0 &&
+          computeChildDistance() >= currentFragmentLength * (sensitivity / 100)) {
         resumeNav();
-        lastCoverage = null;
       }
     }
   }
@@ -275,34 +269,21 @@
     setTimeout(() => speechSynthesis.speak(u), 60);
   }
 
-  function samplePath(d) {
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', d);
-    const len = path.getTotalLength();
-    const pts = [];
-    for (let l = 0; l <= len; l += PATH_SAMPLE_STEP) {
-      const p = path.getPointAtLength(l);
-      pts.push({ x: p.x, y: p.y });
-    }
-    return pts;
-  }
-
   function canvasToSvg(x, y) {
     const [, , vw, vh] = (kanji.viewBox || '0 0 109 109').split(' ').map(Number);
     const rect = canvas.getBoundingClientRect();
     return { x: (x / rect.width) * vw, y: (y / rect.height) * vh };
   }
 
-  function computeCoverage() {
-    if (!currentFragmentSamples.length || !childTrace.length) return 0;
-    let covered = 0;
-    for (const sp of currentFragmentSamples) {
-      for (const ct of childTrace) {
-        const dx = ct.x - sp.x, dy = ct.y - sp.y;
-        if (Math.sqrt(dx * dx + dy * dy) < COVERAGE_DIST_THRESHOLD) { covered++; break; }
-      }
+  function computeChildDistance() {
+    if (childTrace.length < 2) return 0;
+    let dist = 0;
+    for (let i = 1; i < childTrace.length; i++) {
+      const dx = childTrace[i].x - childTrace[i - 1].x;
+      const dy = childTrace[i].y - childTrace[i - 1].y;
+      dist += Math.sqrt(dx * dx + dy * dy);
     }
-    return covered / currentFragmentSamples.length;
+    return dist;
   }
 
   export function resumeNav() {
@@ -366,8 +347,17 @@
         kanji.strokes[strokeIdx].songFragment !== kanji.strokes[strokeIdx + 1].songFragment;
       if (nextStrokeIsNewFragment) {
         const curFrag = kanji.strokes[strokeIdx].songFragment;
-        const fragStrokes = kanji.strokes.filter(s => s.songFragment === curFrag);
-        currentFragmentSamples = fragStrokes.flatMap(s => samplePath(s.d));
+        let fragStart = strokeIdx;
+        while (fragStart > 0 &&
+               kanji.strokes[fragStart - 1].songFragment === curFrag) {
+          fragStart--;
+        }
+        const fragStrokes = kanji.strokes.slice(fragStart, strokeIdx + 1);
+        currentFragmentLength = fragStrokes.reduce((sum, s) => {
+          const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          p.setAttribute('d', s.d);
+          return sum + p.getTotalLength();
+        }, 0);
         childTrace = [];
         paused = true;
         onPaused?.();
@@ -588,24 +578,4 @@
   /* Session 266 v3: マスター指示「書いている時も書いていない時も書き終わった後も同じ枠の大きさ・同じ見え方」
      → .trace-wrap.inactive の opacity / pointer-events / display: none を全削除（見た目の差別化を撤回） */
 
-  .debug-pt {
-    fill: #ef4444;
-    opacity: 0.75;
-    pointer-events: none;
-  }
-
-  .coverage-badge {
-    position: absolute;
-    bottom: 6px;
-    left: 6px;
-    background: rgba(0, 0, 0, 0.62);
-    color: #fff;
-    font-size: 0.72rem;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: monospace;
-    pointer-events: none;
-    z-index: 10;
-    line-height: 1.4;
-  }
 </style>

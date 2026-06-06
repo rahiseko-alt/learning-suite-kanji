@@ -538,8 +538,8 @@
   .sort-tab {
     font-family: inherit;
     font-weight: 700;
-    font-size: 0.78rem;
-    padding: 0.3rem 0.7rem;
+    font-size: 0.82rem;
+    padding: 0.4rem 0.75rem;
     border-radius: 999px;
     border: 2px solid #e2e8f0;
     background: #fff;
@@ -551,10 +551,10 @@
   .filter-right { display: flex; gap: 0.4rem; align-items: center; }
   .view-toggle {
     font-family: inherit;
-    font-size: 1.1rem;
+    font-size: 0.82rem;
     font-weight: 700;
-    padding: 0.3rem 0.6rem;
-    border-radius: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
     border: 2px solid #e2e8f0;
     background: #fff;
     color: #475569;
@@ -563,9 +563,9 @@
   }
   .saved-filter {
     font-family: inherit;
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     font-weight: 700;
-    padding: 0.3rem 0.7rem;
+    padding: 0.4rem 0.75rem;
     border-radius: 999px;
     border: 2px solid #fde68a;
     background: #fff;
@@ -584,16 +584,17 @@
     width: 2.4rem;
     height: 2.4rem;
     border-radius: 50%;
-    border: 2px solid #e2e8f0;
+    border: 2px solid #fbbf24;
     background: #fff;
-    color: #cbd5e1;
+    color: #fbbf24;
+    opacity: 0.35;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     -webkit-tap-highlight-color: transparent;
   }
-  .save-btn.saved { color: #fbbf24; border-color: #fde68a; background: #fffbeb; }
+  .save-btn.saved { opacity: 1; background: #fffbeb; }
 
   /* === グリッド表示 === */
   .set-grid {
@@ -630,7 +631,8 @@
     border: none;
     border-top: 1px solid #f1f5f9;
     background: transparent;
-    color: #cbd5e1;
+    color: #fbbf24;
+    opacity: 0.35;
     font-size: 0.85rem;
     padding: 0.2rem;
     cursor: pointer;
@@ -638,7 +640,7 @@
     text-align: center;
     -webkit-tap-highlight-color: transparent;
   }
-  .tile-save.saved { color: #fbbf24; background: #fffbeb; }
+  .tile-save.saved { opacity: 1; background: #fffbeb; }
 
   .empty-saved {
     text-align: center;

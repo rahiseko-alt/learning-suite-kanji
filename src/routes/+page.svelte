@@ -487,7 +487,7 @@
   .filter-bar {
     display: flex;
     gap: 6px;
-    margin-top: 0.5rem;
+    margin-top: 4rem;
     width: 100%;
     max-width: 480px;
     flex-shrink: 0;

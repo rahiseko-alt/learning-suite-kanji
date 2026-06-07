@@ -15,9 +15,6 @@
   // 6. 1 つ以上選択で確定ボタン表示 → /play?sets= に遷移
   // Session 273: 設定ボタン追加（play 画面と同じ AssetSettings モーダル・localStorage 共有）
 
-  let titleVisible = $state(false);
-  let buttonVisible = $state(false);
-  let listVisible = $state(false);
   let selectedIds = $state([]);
   let showSettings = $state(false);
 
@@ -114,11 +111,6 @@
     return sets;
   });
 
-  onMount(() => {
-    setTimeout(() => { titleVisible = true; }, 80);
-    setTimeout(() => { buttonVisible = true; }, 1500);
-  });
-
   function toggleSelect(id) {
     if (selectedIds.includes(id)) {
       selectedIds = selectedIds.filter((x) => x !== id);
@@ -160,31 +152,8 @@
     <span class="planet planet-2">🌙</span>
   </div>
 
-  <!-- マスコット（Session 273: 王道シンプル路線・タイトル上方に拡大配置） -->
-  <div class="title-mascot" class:visible={titleVisible} aria-hidden="true">
-    {#if assets.character}
-      <img src={assets.character} alt="" />
-    {:else}
-      🐱
-    {/if}
-  </div>
-
-  <!-- タイトル：画面外（上）から中央位置へ降下 -->
-  <h1 class="app-title" class:visible={titleVisible}>かんじでアソボ！</h1>
-
-  <!-- 「あそぶ」ボタン（タイトル降下後 0.5 秒でフェードイン） -->
-  {#if !listVisible}
-    <button
-      class="btn btn--primary big play-btn"
-      class:visible={buttonVisible}
-      onclick={() => { listVisible = true; }}
-      disabled={!buttonVisible}
-    >▶ あそぶ</button>
-  {/if}
-
-  <!-- 縦一覧セット選択（押下後に出現） -->
-  {#if listVisible}
-    <div class="filter-bar">
+  <!-- 漢字選択（フルスクリーン） -->
+  <div class="filter-bar">
       <button class="filter-tab" class:active={sortMode==='default'} onclick={() => sortMode='default'}>一覧</button>
       <button class="filter-tab" class:active={sortMode==='stroke'} onclick={() => sortMode='stroke'}>画数↑</button>
       <button class="filter-tab" class:active={sortMode==='aiueo'}  onclick={() => sortMode='aiueo'}>あいうえお</button>
@@ -216,7 +185,6 @@
         ✨ えらんだ {selectedIds.length} つで あそぶ
       </button>
     {/if}
-  {/if}
 
   {#if showSettings}
     <AssetSettings bind:assets bind:adjustments onclose={closeSettings} />
@@ -232,7 +200,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1rem;
+    padding: 0.5rem 1rem 1rem;
   }
 
   /* === 背景装飾 === */
@@ -266,85 +234,6 @@
   @keyframes twinkle {
     0%, 100% { opacity: 0.3; transform: scale(0.85); }
     50%      { opacity: 0.8; transform: scale(1.15); }
-  }
-
-  /* === マスコット（Session 273: 王道シンプル路線・タイトル上方に拡大） === */
-  .title-mascot {
-    position: relative;
-    z-index: 2;
-    margin-top: 8vh;
-    font-size: clamp(5rem, 22vw, 9rem);
-    line-height: 1;
-    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.18));
-    /* 初期 = 透明・少し小さい */
-    opacity: 0;
-    transform: translateY(20px) scale(0.7);
-    transition:
-      opacity 0.5s ease-out 0.4s,
-      transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s;
-  }
-  .title-mascot.visible {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    animation: mascot-bob 2.4s ease-in-out 1.2s infinite;
-  }
-  .title-mascot img {
-    width: clamp(5rem, 22vw, 9rem);
-    height: clamp(5rem, 22vw, 9rem);
-    object-fit: contain;
-    border-radius: 50%;
-  }
-  @keyframes mascot-bob {
-    0%, 100% { transform: translateY(0) scale(1); }
-    50%      { transform: translateY(-12px) scale(1); }
-  }
-
-  /* === タイトル：画面外（上）→ 中央位置へ降下（Session 273 王道シンプル化） === */
-  .app-title {
-    position: relative;
-    z-index: 2;
-    margin: 0;
-    margin-top: 1.2rem; /* マスコットからの間隔 */
-    font-size: clamp(2.4rem, 8.5vw, 4.5rem);
-    font-weight: 900;
-    color: #b91c1c;
-    letter-spacing: 0.08em;
-    text-align: center;
-    /* 丸ゴシック優先 → 学校で習う字形に近づける */
-    font-family: "Hiragino Maru Gothic ProN", "Hiragino Maru Gothic Std", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
-    -webkit-text-stroke: 4px #ffffff;
-    paint-order: stroke fill;
-    /* 単一の下方シャドウのみ（多層立体は撤去） */
-    text-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
-    /* 初期位置 = 画面外上 */
-    transform: translateY(-150vh) rotate(-12deg);
-    opacity: 0;
-    transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease-out;
-  }
-  .app-title.visible {
-    transform: translateY(0) rotate(0deg);
-    opacity: 1;
-  }
-
-  /* === 「あそぶ」ボタン === */
-  .play-btn {
-    position: relative;
-    z-index: 2;
-    margin-top: 3rem;
-    opacity: 0;
-    transform: translateY(20px) scale(0.9);
-    transition: opacity 0.5s ease-out, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-    pointer-events: none;
-  }
-  .play-btn.visible {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: auto;
-    animation: btn-pulse 1.4s ease-in-out 0.5s infinite;
-  }
-  @keyframes btn-pulse {
-    0%, 100% { box-shadow: inset 0 -5px 0 rgba(146, 64, 14, 0.18), 0 7px 0 #c2750c, 0 10px 18px rgba(194, 117, 12, 0.3), 0 0 0 0 rgba(251, 191, 36, 0.6); }
-    50%      { box-shadow: inset 0 -5px 0 rgba(146, 64, 14, 0.18), 0 7px 0 #c2750c, 0 10px 18px rgba(194, 117, 12, 0.3), 0 0 0 18px rgba(251, 191, 36, 0); }
   }
 
   /* === 縦一覧セット選択（カード内スクロール形式） === */
@@ -497,7 +386,7 @@
   .filter-bar {
     display: flex;
     gap: 6px;
-    margin-top: 12px;
+    margin-top: 4rem;
     width: 100%;
     max-width: 480px;
     flex-shrink: 0;

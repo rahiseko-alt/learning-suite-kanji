@@ -12,13 +12,13 @@ export const KANJI_TAMA = {
   word: '玉（たま）',
   strokeCount: 5,
   viewBox: '0 0 109 109',
-  songLyric: '',
+  songLyric: 'よこ、たて、よこ、よこ、てん',
   strokes: [
     {
       id: 1,
       color: '#ec4899',
-      label: 'よこ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'よこ',
+      songFragment: 'よこ',
       type: '㇐',
       // KanjiVG kvg:07389-s1
       d: 'M28.5,23.09c2.95,0.98,5.91,0.53,8.9,0.08c10.77-1.63,21.21-3.33,34.11-4.7c2.78-0.3,5.28-0.62,7.99,0.27',
@@ -27,8 +27,8 @@ export const KANJI_TAMA = {
     {
       id: 2,
       color: '#38bdf8',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'たて',
+      songFragment: 'たて',
       type: '㇑a',
       // KanjiVG kvg:07389-s2
       d: 'M52,24.6c1,1.21,2,2.4,2,4.41c0,5.38,0.25,50.24,0.25,57.94',
@@ -37,8 +37,8 @@ export const KANJI_TAMA = {
     {
       id: 3,
       color: '#22c55e',
-      label: 'よこ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'よこ',
+      songFragment: 'よこ',
       type: '㇐',
       // KanjiVG kvg:07389-s3
       d: 'M28.25,56.12c2.87,0.9,5.86,0.52,8.78,0.16c9.8-1.18,23.9-3.6,33.1-4.57c2.62-0.28,5.52-0.7,8.11,0.01',
@@ -47,8 +47,8 @@ export const KANJI_TAMA = {
     {
       id: 4,
       color: '#f97316',
-      label: 'よこ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'よこ',
+      songFragment: 'よこ',
       type: '㇐',
       // KanjiVG kvg:07389-s4
       d: 'M16,90.01c3.95,1.17,7.96,0.72,11.99,0.37c21.05-1.84,37.97-4.1,56.63-4.43c3.9-0.07,8.1-0.22,11.88,0.96',
@@ -57,8 +57,8 @@ export const KANJI_TAMA = {
     {
       id: 5,
       color: '#a855f7',
-      label: 'てん',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'てん',
+      songFragment: 'てん',
       type: '㇔',
       // KanjiVG kvg:07389-s5
       d: 'M72,64c5.43,2.74,10.09,8.57,11.25,12',

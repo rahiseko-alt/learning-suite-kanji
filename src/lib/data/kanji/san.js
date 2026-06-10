@@ -7,18 +7,18 @@
 // 動作語: 未取得（PDF を確認して songFragment / songLyric を手書きで埋めること）
 export const KANJI_SAN = {
   char: '三',
-  reading: 'み',  // TODO: ひらがな読みを記入
-  meaning: '三重県の三',  // TODO: 意味（短文）を記入
-  word: '三（み）',     // TODO: 縦書き表示用の単語（例: '井と'）を記入
+  reading: 'み',
+  meaning: '三重県の三',
+  word: '三（み）',
   strokeCount: 3,
   viewBox: '0 0 109 109',
-  songLyric: '',  // TODO: 覚え歌全体（読み上げ用 1 行）を記入
+  songLyric: 'よこ、よこ、よこ',
   strokes: [
     {
       id: 1,
       color: '#ec4899',
-      label: 'よこ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'よこ',
+      songFragment: 'よこ',
       type: '㇐',
       // KanjiVG kvg:04e09-s1
       d: 'M27.5,23.65c3.09,0.73,6.29,0.36,9.4,0.06c10.2-1,27-2.94,38.97-3.57c3.06-0.16,6.09-0.2,9.14,0.23',
@@ -27,8 +27,8 @@ export const KANJI_SAN = {
     {
       id: 2,
       color: '#38bdf8',
-      label: 'よこ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'よこ',
+      songFragment: 'よこ',
       type: '㇐',
       // KanjiVG kvg:04e09-s2
       d: 'M28.75,55.14c3.13,0.76,6.46,0.43,9.64,0.2c10.03-0.72,23.97-2.63,34.73-3.12c2.7-0.12,5.45-0.16,8.13,0.3',
@@ -37,8 +37,8 @@ export const KANJI_SAN = {
     {
       id: 3,
       color: '#22c55e',
-      label: 'よこ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'よこ',
+      songFragment: 'よこ',
       type: '㇐',
       // KanjiVG kvg:04e09-s3
       d: 'M13,87.83c3.94,1.01,7.72,0.96,11.75,0.72c18.41-1.07,41.27-3.39,61.12-4.07c3.63-0.13,7.2-0.1,10.75,0.78',

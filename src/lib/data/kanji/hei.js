@@ -12,13 +12,13 @@ export const KANJI_HEI = {
   word: '兵（ひょう）',
   strokeCount: 7,
   viewBox: '0 0 109 109',
-  songLyric: '',  // TODO: 覚え歌全体（読み上げ用 1 行）を記入
+  songLyric: 'ノ、たて、よこ、たて、よこ、ハ',
   strokes: [
     {
       id: 1,
       color: '#ec4899',
-      label: 'ノ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ノ',
+      songFragment: 'ノ',
       type: '㇒',
       // KanjiVG kvg:05175-s1
       d: 'M63.53,13c-0.03,1-0.73,2.17-1.42,2.86c-6.96,7.1-13.96,11.56-27.87,18.68',
@@ -27,8 +27,8 @@ export const KANJI_HEI = {
     {
       id: 2,
       color: '#38bdf8',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'たて',
+      songFragment: 'たて',
       type: '㇑a',
       // KanjiVG kvg:05175-s2
       d: 'M33.18,34.33c1.06,1.06,1.62,2.26,1.77,4.07c0.55,6.7,1.65,21.04,2.3,27.54',
@@ -37,8 +37,8 @@ export const KANJI_HEI = {
     {
       id: 3,
       color: '#22c55e',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'よこ',
+      songFragment: 'よこ',
       type: '㇐b',
       // KanjiVG kvg:05175-s3
       d: 'M36.53,41.82c9.72-1.17,28.09-4.32,39.51-6.15c1.75-0.28,4.85-0.44,5.96-0.25',
@@ -47,8 +47,8 @@ export const KANJI_HEI = {
     {
       id: 4,
       color: '#f97316',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'たて',
+      songFragment: 'たて',
       type: '㇑a',
       // KanjiVG kvg:05175-s4
       d: 'M67.87,41.47c0.63,1.03,0.81,2.14,0.57,3.32c-0.7,3.46-1.95,8.21-3.95,16.88',
@@ -57,8 +57,8 @@ export const KANJI_HEI = {
     {
       id: 5,
       color: '#a855f7',
-      label: 'よこ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'よこ',
+      songFragment: 'よこ',
       type: '㇐',
       // KanjiVG kvg:05175-s5
       d: 'M14.75,67.5c2.48,0.72,7.04,1,9.5,0.72c17.37-1.98,35.35-3.97,60.95-5.44c4.12-0.24,7.55-0.16,10.67,0.63',
@@ -67,8 +67,8 @@ export const KANJI_HEI = {
     {
       id: 6,
       color: '#ef4444',
-      label: 'ノ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ハ',
+      songFragment: 'ハ',
       type: '㇒',
       // KanjiVG kvg:05175-s6
       d: 'M42.66,76.5c0.07,0.51,0.04,1.48-0.39,2.06C36.91,85.79,28.98,92.42,15,98.25',
@@ -77,8 +77,8 @@ export const KANJI_HEI = {
     {
       id: 7,
       color: '#eab308',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ハ',
+      songFragment: 'ハ',
       type: '㇔/㇏',
       // KanjiVG kvg:05175-s7
       d: 'M67.25,76.5c7.88,4.25,19.38,14,22.56,20.22',

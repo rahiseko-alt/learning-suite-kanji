@@ -12,13 +12,13 @@ export const KANJI_RA = {
   word: '良（ら）',
   strokeCount: 7,
   viewBox: '0 0 109 109',
-  songLyric: '',  // TODO: 覚え歌全体（読み上げ用 1 行）を記入
+  songLyric: 'たて、ヨ、たてみぎはね、ノ、ひだりはらい',
   strokes: [
     {
       id: 1,
       color: '#ec4899',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'たて',
+      songFragment: 'たて',
       type: '㇑a',
       // KanjiVG kvg:0826f-s1
       d: 'M51.34,9.75c0.89,0.89,1.28,2.5,1.28,3.78c0,1.99,0.06,7.1,0.06,10.09',
@@ -27,8 +27,8 @@ export const KANJI_RA = {
     {
       id: 2,
       color: '#38bdf8',
-      label: 'よこおれ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ヨ',
+      songFragment: 'ヨ',
       type: '㇕',
       // KanjiVG kvg:0826f-s2
       d: 'M31.12,26.12c1.12,0.75,2.87,1.09,4.75,0.8c11.75-1.8,33.19-4.43,35.54-4.56c2.3-0.12,3.71,1.5,3.61,3.28c-0.25,4.37-1.94,14.62-3.6,22.76c-0.27,1.31-0.54,2.57-0.8,3.75',
@@ -37,8 +37,8 @@ export const KANJI_RA = {
     {
       id: 3,
       color: '#22c55e',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ヨ',
+      songFragment: 'ヨ',
       type: '㇐a',
       // KanjiVG kvg:0826f-s3
       d: 'M35.19,39.95c10.56-1.58,29.98-3.58,37.32-4.04',
@@ -47,8 +47,8 @@ export const KANJI_RA = {
     {
       id: 4,
       color: '#f97316',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ヨ',
+      songFragment: 'ヨ',
       type: '㇐a',
       // KanjiVG kvg:0826f-s4
       d: 'M35.33,53.33c11.05-1.2,23.44-2.23,34.81-3.11',
@@ -57,8 +57,8 @@ export const KANJI_RA = {
     {
       id: 5,
       color: '#a855f7',
-      label: 'たてはね',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'たてみぎはね',
+      songFragment: 'たてみぎはね',
       type: '㇙',
       // KanjiVG kvg:0826f-s5
       d: 'M32.51,27.24c1.12,1.12,1.61,2.71,1.61,3.88c0,4.63,0.1,54.75,0.1,59.57c0,2.54,1.03,4.81,3.62,2.95c4.96-3.57,8.91-6.64,14.91-11.39',
@@ -67,8 +67,8 @@ export const KANJI_RA = {
     {
       id: 6,
       color: '#ef4444',
-      label: 'ノ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ノ',
+      songFragment: 'ノ',
       type: '㇒',
       // KanjiVG kvg:0826f-s6
       d: 'M82.05,52.69c0.2,1.56-0.43,2.87-1.54,4.01c-1.75,1.8-8.5,7.92-14.87,12.49',
@@ -77,8 +77,8 @@ export const KANJI_RA = {
     {
       id: 7,
       color: '#eab308',
-      label: 'ハ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ひだりはらい',
+      songFragment: 'ひだりはらい',
       type: '㇏',
       // KanjiVG kvg:0826f-s7
       d: 'M44.32,61.84c5.72,0,35.24,24.86,39.64,27.33c3.91,2.2,5.91,3.32,9.61,4.37',

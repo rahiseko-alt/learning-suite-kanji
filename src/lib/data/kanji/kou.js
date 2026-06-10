@@ -12,13 +12,13 @@ export const KANJI_KOU = {
   word: '香（か）',
   strokeCount: 9,
   viewBox: '0 0 109 109',
-  songLyric: '',  // TODO: 覚え歌全体（読み上げ用 1 行）を記入
+  songLyric: 'ノに き、ひ',
   strokes: [
     {
       id: 1,
       color: '#ec4899',
-      label: 'ノ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ノにき',
+      songFragment: 'ノにき',
       type: '㇒',
       // KanjiVG kvg:09999-s1
       d: 'M65.23,10.73c0,0.77-0.48,1.39-1.77,2.14c-4.44,2.56-16.84,7.14-33.18,10',
@@ -27,8 +27,8 @@ export const KANJI_KOU = {
     {
       id: 2,
       color: '#38bdf8',
-      label: 'よこ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ノにき',
+      songFragment: 'ノにき',
       type: '㇐',
       // KanjiVG kvg:09999-s2
       d: 'M19.83,37.05c3.03,0.92,6.11,0.55,9.19,0.16c10.11-1.27,31.35-4.46,44.5-5.83c3.46-0.36,7.03-0.45,10.46,0.18',
@@ -37,8 +37,8 @@ export const KANJI_KOU = {
     {
       id: 3,
       color: '#22c55e',
-      label: 'たて',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ノにき',
+      songFragment: 'ノにき',
       type: '㇑',
       // KanjiVG kvg:09999-s3
       d: 'M52.73,21.06c0.92,0.92,1.08,2.19,1.08,3.85c0,6.46-0.04,16.84-0.04,27.59c0,1.8-0.02,3.57-0.02,5.25',
@@ -47,8 +47,8 @@ export const KANJI_KOU = {
     {
       id: 4,
       color: '#f97316',
-      label: 'ノ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ノにき',
+      songFragment: 'ノにき',
       type: '㇒',
       // KanjiVG kvg:09999-s4
       d: 'M47.98,35.41c0,1.09-0.95,2.31-2.09,3.67c-7.48,8.93-19.42,19.21-31.13,24.39',
@@ -57,8 +57,8 @@ export const KANJI_KOU = {
     {
       id: 5,
       color: '#a855f7',
-      label: 'ハ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ノにき',
+      songFragment: 'ノにき',
       type: '㇏',
       // KanjiVG kvg:09999-s5
       d: 'M56.04,34.96c4.46,3.79,16.83,13.67,27.53,20.13c2.94,1.78,6.56,3.54,9.68,4.52',
@@ -67,8 +67,8 @@ export const KANJI_KOU = {
     {
       id: 6,
       color: '#ef4444',
-      label: 'たて',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ひ',
+      songFragment: 'ひ',
       type: '㇑',
       // KanjiVG kvg:09999-s6
       d: 'M33.02,65.47c0.76,0.76,1.42,2.12,1.53,3.07c0.83,7.34,1.84,16.47,2.84,24.76c0.21,1.78,0.43,3.45,0.66,4.95',
@@ -77,8 +77,8 @@ export const KANJI_KOU = {
     {
       id: 7,
       color: '#eab308',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ひ',
+      songFragment: 'ひ',
       type: '㇕a',
       // KanjiVG kvg:09999-s7
       d: 'M35.44,67.59c8.15-1.36,24.31-3.72,36.08-4.79c3.5-0.32,6.77,0.39,6.35,4.71c-0.45,4.67-1.85,15.6-2.74,22.26c-0.3,2.22-0.54,3.97-0.68,4.85',
@@ -87,8 +87,8 @@ export const KANJI_KOU = {
     {
       id: 8,
       color: '#06b6d4',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ひ',
+      songFragment: 'ひ',
       type: '㇐a',
       // KanjiVG kvg:09999-s8
       d: 'M36.58,80.52c8.29-0.9,31.17-3.65,39.22-4.11',
@@ -97,8 +97,8 @@ export const KANJI_KOU = {
     {
       id: 9,
       color: '#84cc16',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ひ',
+      songFragment: 'ひ',
       type: '㇐a',
       // KanjiVG kvg:09999-s9
       d: 'M38.44,94.26C46.12,93.5,63.88,92,74.29,91.4',

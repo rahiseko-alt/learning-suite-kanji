@@ -7,18 +7,18 @@
 // 動作語: 未取得（PDF を確認して songFragment / songLyric を手書きで埋めること）
 export const KANJI_SHI = {
   char: '滋',
-  reading: 'し',  // TODO: ひらがな読みを記入
-  meaning: '滋賀県の滋',  // TODO: 意味（短文）を記入
-  word: '滋（し）',     // TODO: 縦書き表示用の単語（例: '井と'）を記入
+  reading: 'し',
+  meaning: '滋賀県の滋',
+  word: '滋（し）',
   strokeCount: 12,
   viewBox: '0 0 109 109',
-  songLyric: '',  // TODO: 覚え歌全体（読み上げ用 1 行）を記入
+  songLyric: 'シ、ソ、よこ、くム、くム',
   strokes: [
     {
       id: 1,
       color: '#ec4899',
-      label: 'てん',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'シ',
+      songFragment: 'シ',
       type: '㇔',
       // KanjiVG kvg:06ecb-s1
       d: 'M22.01,18c3.97,1.38,10.25,5.69,11.24,7.84',
@@ -27,8 +27,8 @@ export const KANJI_SHI = {
     {
       id: 2,
       color: '#38bdf8',
-      label: 'てん',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'シ',
+      songFragment: 'シ',
       type: '㇔',
       // KanjiVG kvg:06ecb-s2
       d: 'M14.88,41.25c4.02,1.32,10.37,5.44,11.38,7.5',
@@ -37,8 +37,8 @@ export const KANJI_SHI = {
     {
       id: 3,
       color: '#22c55e',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'シ',
+      songFragment: 'シ',
       type: '㇀',
       // KanjiVG kvg:06ecb-s3
       d: 'M14.25,87.86c1.25,0.65,2.54,0.41,3.28-0.95c2.74-4.98,5.48-11.06,7.97-17.41',
@@ -47,8 +47,8 @@ export const KANJI_SHI = {
     {
       id: 4,
       color: '#f97316',
-      label: 'てん',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ソ',
+      songFragment: 'ソ',
       type: '㇔',
       // KanjiVG kvg:06ecb-s4
       d: 'M50.32,19.61c2.73,2.12,7.05,8.7,7.74,11.99',
@@ -57,8 +57,8 @@ export const KANJI_SHI = {
     {
       id: 5,
       color: '#a855f7',
-      label: 'ノ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'ソ',
+      songFragment: 'ソ',
       type: '㇒',
       // KanjiVG kvg:06ecb-s5
       d: 'M82.11,17.39c0.14,0.7-0.16,1.83-0.39,2.34c-1.97,4.4-5.27,9.84-7.6,12.65',
@@ -67,8 +67,8 @@ export const KANJI_SHI = {
     {
       id: 6,
       color: '#ef4444',
-      label: 'よこ',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'よこ',
+      songFragment: 'よこ',
       type: '㇐',
       // KanjiVG kvg:06ecb-s6
       d: 'M37.38,38.68c2.87,0.44,5.81,0.4,8.49,0.19c11.66-0.91,23.62-2.46,42.77-3.41c2.82-0.14,5.55-0.09,8.33,0.51',
@@ -77,8 +77,8 @@ export const KANJI_SHI = {
     {
       id: 7,
       color: '#eab308',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'くム',
+      songFragment: 'くム',
       type: '㇜',
       // KanjiVG kvg:06ecb-s7
       d: 'M50.27,46.6c0.23,0.92,0.3,2.11-0.12,3.1c-1.93,4.57-5.64,10.34-8.99,15.42c-0.66,1.01-1.16,1.88,0,2.29c2.89,1.01,6.2,2.7,8.31,4.38',
@@ -87,8 +87,8 @@ export const KANJI_SHI = {
     {
       id: 8,
       color: '#06b6d4',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'くム',
+      songFragment: 'くム',
       type: '㇜',
       // KanjiVG kvg:06ecb-s8
       d: 'M60.77,55.66c0.48,1.34,0.1,2.84-0.83,4.19c-5.73,8.36-13.31,17.52-22.78,28.46c-1.09,1.26-0.4,2.44,0.9,2.08c8.95-2.46,13.08-3.64,20.83-5.92',
@@ -97,8 +97,8 @@ export const KANJI_SHI = {
     {
       id: 9,
       color: '#84cc16',
-      label: 'てん',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'くム',
+      songFragment: 'くム',
       type: '㇔',
       // KanjiVG kvg:06ecb-s9
       d: 'M55.85,77.19c2.68,2.77,6.92,11.4,7.59,15.71',
@@ -107,8 +107,8 @@ export const KANJI_SHI = {
     {
       id: 10,
       color: '#f43f5e',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'くム',
+      songFragment: 'くム',
       type: '㇜',
       // KanjiVG kvg:06ecb-s10
       d: 'M80.57,45.76c0.25,1.03,0.34,2.01-0.12,3.17c-2.32,5.81-5.97,11.62-9.06,16.1c-1.01,1.46-0.38,2.21,0.75,2.58c2.68,0.88,4.99,2,8.63,3.73',
@@ -117,8 +117,8 @@ export const KANJI_SHI = {
     {
       id: 11,
       color: '#3b82f6',
-      label: '',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'くム',
+      songFragment: 'くム',
       type: '㇜',
       // KanjiVG kvg:06ecb-s11
       d: 'M90.39,54.96c0.3,1.13,0.15,3.42-0.28,4.08C84.76,67.35,80.18,74,72.48,84.21c-1.43,1.89-1.57,3.62,1.62,2.56c6.56-2.19,9.53-3.26,17.02-5.51',
@@ -127,8 +127,8 @@ export const KANJI_SHI = {
     {
       id: 12,
       color: '#14b8a6',
-      label: 'てん',     // TODO: 動作語に合わせて修正可（既定は KanjiVG kvg:type 由来のヒント）
-      songFragment: '', // TODO: PDF を見て動作語を記入
+      label: 'くム',
+      songFragment: 'くム',
       type: '㇔',
       // KanjiVG kvg:06ecb-s12
       d: 'M88.79,75.1c2.36,2.73,6.08,11.21,6.67,15.46',

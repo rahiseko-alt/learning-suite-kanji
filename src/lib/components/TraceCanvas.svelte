@@ -1,5 +1,6 @@
 <script>
   import { base } from '$app/paths';
+  import { SONG_NAVI_ENABLED } from '$lib/config.js';
   // 描画＋お手本筆順アニメ＋覚え歌連動
   // kanji: 練習対象の漢字データ（lib/data/kanji/ 配下から渡される）
   // onRestart: 「やりなおし」が押されたら親に通知（スタート相当を発動）
@@ -23,15 +24,21 @@
   //   児童書字軌跡 vs 動作語 path の一致率（カバー率）で「動作語完了」を客観判定 → resume
   //   時間ベースの idle 検出は廃止（pointerup の意味曖昧性 = 4 通り解釈問題を構造的に解消）
   //   設計詳細: docs/design/2026-05-25-pause-resume-strategy.md §推奨案 R4
+  //   Part A（軌跡一致率判定へ置換）: 児童書字の最近軌跡 vs グループ path のカバー率で resume 判定
   let paused = $state(false);
   let pauseResolver = null;
   let runEpoch = 0; // replayDemo の中断検出用
-  let lastFragStrokeCount = 0; // 現フラグメントの総画数（pause 開始時に設定）
-  let fragStrokeDown = 0;      // pause 開始後の pointerDown 回数
   let childTrace = $state([]);
+  let recentTrace = []; // 直近 RECENT_TRACE_WINDOW_MS の書字点（svg 座標 + ts）
+  let fragmentPathSamples = []; // 現グループの各画 path サンプル点列
 
   const PEN_WIDTH = 8;
   const PEN_COLOR = '#1e293b';
+  // Part A: 軌跡一致率（カバー率）判定の定数（姉妹版 learning-suite-kanji-foreign より移植）
+  const PATH_SAMPLE_STEP = 10;
+  const COVERAGE_DIST_THRESHOLD = 20;
+  const COVERAGE_RATIO_THRESHOLD = 0.18;
+  const RECENT_TRACE_WINDOW_MS = 1400;
   // Session 266: 描画速度一定化（マスター指示「画数に限らず 1 ナビの速度を一定」）
   // 各画の duration = pathLength / VELOCITY * 1000 で計算 → 短い path は短時間・長い path は長時間（速度は同じ）
   const STROKE_VELOCITY = 60;          // SVG ユニット/秒（viewBox 109 単位系）
@@ -45,17 +52,22 @@
   let lyricStripEl = $state();
   let lyricOffset = $state(0);
 
-  // Session 266: 連続する同じ songFragment を 1 つにマージしたユニーク動作語列
+  // Part A: グループ化キー。songFragment が空（新規 50 字）は 1 画ごと、有（既存 26 字）は動作語境界。
+  //   ※ '' ?? x は '' を返すため truthy 判定を使う（?? 禁止）
+  const groupKey = (s) => (s.songFragment && s.songFragment.trim()) ? s.songFragment : 's' + s.id;
+
+  // Session 266: 連続する同じ動作語グループを 1 つにマージしたユニーク動作語列
   // 例 愛 13 画: 'ノ','ツ','ツ','ツ','ワ','ワ','心','心','心','心','ク','ク','右はらい'
   //   → uniqueFragments 6 個: ノ(0)/ツ(1)/ワ(4)/心(6)/ク(10)/右はらい(12)
   // 同じ動作語が連続する画では音声を再発火せず・ストリップも 1 つだけ表示する
   let uniqueFragments = $derived.by(() => {
     const arr = [];
-    let lastFrag = null;
+    let lastKey = null;
     kanji.strokes.forEach((s, i) => {
-      if (s.songFragment !== lastFrag) {
+      const k = groupKey(s);
+      if (k !== lastKey) {
         arr.push({ fragment: s.songFragment, color: s.color, startIdx: i });
-        lastFrag = s.songFragment;
+        lastKey = k;
       }
     });
     return arr;
@@ -175,25 +187,19 @@
 
   function pointerDown(e) {
     // Session 266 v3: 全枠で書字可能（マスター指示「同じ見え方」）→ active チェックを撤回
-    // childTrace は pause 開始時のみリセット（同フラグメント内で複数筆使えるよう累積）
+    // childTrace は pause 開始時のみリセット（同グループ内で複数筆使えるよう累積）
     e.preventDefault();
     canvas.setPointerCapture?.(e.pointerId);
     const p = getPos(e);
     drawing = true;
     lastX = p.x;
     lastY = p.y;
+    const svgP = canvasToSvg(p.x, p.y);
+    pushRecentTracePoint(svgP);
+    if (paused) childTrace = [...childTrace, svgP];
     ctx.beginPath();
     ctx.arc(p.x, p.y, ctx.lineWidth / 2, 0, Math.PI * 2);
     ctx.fill();
-    // 最後の一画に着手した瞬間 → 次フラグメントのナビを開始
-    // fragStrokeDown が lastFragStrokeCount に達した = 最後の画に着手
-    if (paused) {
-      fragStrokeDown++;
-      if (fragStrokeDown >= lastFragStrokeCount) {
-        resumeNav();
-        fragStrokeDown = 0;
-      }
-    }
   }
 
   function pointerMove(e) {
@@ -206,7 +212,12 @@
     ctx.stroke();
     lastX = p.x;
     lastY = p.y;
-    if (paused) childTrace = [...childTrace, canvasToSvg(e.offsetX, e.offsetY)];
+    const svgP = canvasToSvg(p.x, p.y);
+    pushRecentTracePoint(svgP);
+    if (paused) {
+      childTrace = [...childTrace, svgP];
+      tryResumeNav();
+    }
   }
 
   function pointerUp(e) {
@@ -215,7 +226,7 @@
     if (canvas.hasPointerCapture?.(e.pointerId)) {
       canvas.releasePointerCapture(e.pointerId);
     }
-    // 筆数カウント方式のため pointerUp での距離判定は不要
+    tryResumeNav();
   }
 
   function clearAll() {
@@ -233,7 +244,9 @@
       animFrameId = null;
     }
     paused = false;
-    fragStrokeDown = 0;
+    fragmentPathSamples = [];
+    childTrace = [];
+    recentTrace = [];
     if (pauseResolver) { pauseResolver(); pauseResolver = null; }
     // 3. ボイス停止
     if (typeof window !== 'undefined') {
@@ -247,6 +260,7 @@
   // スタートボタン押下（ユーザージェスチャー）時に親から呼ぶ。
   // speechSynthesis をジェスチャー中に解放してiOS制限を回避。
   function primeAudio() {
+    if (!SONG_NAVI_ENABLED) return;
     if (typeof window === 'undefined') return;
     if (typeof speechSynthesis !== 'undefined') {
       try { speechSynthesis.speak(new SpeechSynthesisUtterance('')); setTimeout(() => speechSynthesis.cancel(), 50); } catch {}
@@ -281,15 +295,81 @@
     return { x: (x / rect.width) * vw, y: (y / rect.height) * vh };
   }
 
-  function computeChildDistance() {
-    if (childTrace.length < 2) return 0;
-    let dist = 0;
-    for (let i = 1; i < childTrace.length; i++) {
-      const dx = childTrace[i].x - childTrace[i - 1].x;
-      const dy = childTrace[i].y - childTrace[i - 1].y;
-      dist += Math.sqrt(dx * dx + dy * dy);
+  // Part A: path を等間隔サンプリングして点列化（カバー率判定用）
+  function samplePath(d, step) {
+    if (typeof document === 'undefined') return [];
+    const ns = 'http://www.w3.org/2000/svg';
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('d', d);
+    const len = p.getTotalLength();
+    const points = [];
+    if (len <= 0) return points;
+    const n = Math.max(8, Math.ceil(len / step));
+    for (let i = 0; i <= n; i++) {
+      const s = (len * i) / n;
+      const pt = p.getPointAtLength(s);
+      points.push({ x: pt.x, y: pt.y });
     }
-    return dist;
+    return points;
+  }
+
+  // Part A: 直近書字点を時間窓で保持（古い点は破棄）
+  function pushRecentTracePoint(p) {
+    const ts = Date.now();
+    recentTrace.push({ x: p.x, y: p.y, ts });
+    const cutoff = ts - RECENT_TRACE_WINDOW_MS;
+    if (recentTrace.length > 320 || (recentTrace[0]?.ts ?? ts) < cutoff) {
+      recentTrace = recentTrace.filter((pt) => pt.ts >= cutoff);
+    }
+  }
+
+  // Part A: グループ各 path サンプル点列 vs 児童軌跡のカバー率。始点/終点が両方カバーされた path のみ計上
+  function computeCoverage(pathSamples, trace, distThreshold) {
+    if (!trace.length) return 0;
+    let total = 0;
+    let covered = 0;
+    const dt2 = distThreshold * distThreshold;
+    for (const pathPts of pathSamples) {
+      if (pathPts.length === 0) continue;
+      const start = pathPts[0];
+      const end = pathPts[pathPts.length - 1];
+      let startCovered = false;
+      let endCovered = false;
+      for (const cp of trace) {
+        const dxs = start.x - cp.x;
+        const dys = start.y - cp.y;
+        if (dxs * dxs + dys * dys <= dt2) startCovered = true;
+        const dxe = end.x - cp.x;
+        const dye = end.y - cp.y;
+        if (dxe * dxe + dye * dye <= dt2) endCovered = true;
+        if (startCovered && endCovered) break;
+      }
+      if (!startCovered || !endCovered) {
+        total += pathPts.length;
+        continue;
+      }
+      for (const pp of pathPts) {
+        total++;
+        for (const cp of trace) {
+          const dx = pp.x - cp.x;
+          const dy = pp.y - cp.y;
+          if (dx * dx + dy * dy <= dt2) {
+            covered++;
+            break;
+          }
+        }
+      }
+    }
+    return total > 0 ? covered / total : 0;
+  }
+
+  // Part A: カバー率が閾値以上なら resume
+  function tryResumeNav() {
+    if (!paused || fragmentPathSamples.length === 0) return;
+    const coverage = computeCoverage(fragmentPathSamples, childTrace, COVERAGE_DIST_THRESHOLD);
+    if (coverage >= COVERAGE_RATIO_THRESHOLD) {
+      resumeNav();
+    }
   }
 
   export function resumeNav() {
@@ -301,10 +381,12 @@
   function animateStroke(strokeIdx) {
     return new Promise((resolve) => {
       currentStrokeIdx = strokeIdx;
-      // Session 266: 連続する同じ動作語は最初の画だけ音声発火
-      const prevFrag = strokeIdx > 0 ? kanji.strokes[strokeIdx - 1].songFragment : null;
-      if (kanji.strokes[strokeIdx].songFragment !== prevFrag) {
-        speakFragment(strokeIdx);
+      // Session 266: 連続する同じ動作語は最初の画だけ音声発火（Part A: フラグ OFF で TTS 停止・コードは残置）
+      if (SONG_NAVI_ENABLED) {
+        const prevFrag = strokeIdx > 0 ? kanji.strokes[strokeIdx - 1].songFragment : null;
+        if (kanji.strokes[strokeIdx].songFragment !== prevFrag) {
+          speakFragment(strokeIdx);
+        }
       }
       // Session 266: 描画速度一定（pathLength / VELOCITY * 1000 で duration 計算 + MIN/MAX clamp）
       const rawDur = (pathLengths[strokeIdx] / STROKE_VELOCITY) * 1000;
@@ -335,44 +417,51 @@
     const myEpoch = runEpoch;
     if (animFrameId) cancelAnimationFrame(animFrameId);
     if (typeof window !== 'undefined') speechSynthesis.cancel();
+    fragmentPathSamples = [];
+    childTrace = [];
+    recentTrace = [];
     paused = false;
     if (pauseResolver) { pauseResolver(); pauseResolver = null; }
     progress = kanji.strokes.map(() => 0);
     currentStrokeIdx = -1;
 
-    for (let strokeIdx = 0; strokeIdx < kanji.strokes.length; strokeIdx++) {
-      if (myEpoch !== runEpoch) return;
-      await animateStroke(strokeIdx);
-      if (myEpoch !== runEpoch) return;
+    // Part A: グループ単位で走査。groupKey が同じ画を連続再生 → グループ末尾で軌跡一致率判定 pause
+    //   既存 26 字（songFragment 有）は動作語境界、新規 50 字（songFragment 空）は 1 画ごとに pause
+    let strokeIdx = 0;
+    while (strokeIdx < kanji.strokes.length) {
+      const groupStart = strokeIdx;
+      const curKey = groupKey(kanji.strokes[strokeIdx]);
 
-      const isLast = strokeIdx >= kanji.strokes.length - 1;
-      // 井上氏指示（2026-05-25 修正v3 / (B) 案）: 動作語が切り替わる境界で必ず pause
-      //   = ナビは 1 動作語分しか進まず、児童書字を絶対に追い越さない構造
-      //   data 側の pauseAfter フラグは無視（将来 (A)/(C) 案戻り時に活用予定）
-      const nextStrokeIsNewFragment = !isLast &&
-        kanji.strokes[strokeIdx].songFragment !== kanji.strokes[strokeIdx + 1].songFragment;
-      if (nextStrokeIsNewFragment) {
-        const curFrag = kanji.strokes[strokeIdx].songFragment;
-        let fragStart = strokeIdx;
-        while (fragStart > 0 &&
-               kanji.strokes[fragStart - 1].songFragment === curFrag) {
-          fragStart--;
-        }
-        const fragStrokes = kanji.strokes.slice(fragStart, strokeIdx + 1);
-        lastFragStrokeCount = fragStrokes.length; // 最後の一画着手でナビ発火
-        fragStrokeDown = 0;
-        childTrace = [];
-        paused = true;
-        onPaused?.();
-        if (typeof window !== 'undefined') speechSynthesis.cancel();
-        await new Promise((r) => { pauseResolver = r; });
+      while (strokeIdx < kanji.strokes.length && groupKey(kanji.strokes[strokeIdx]) === curKey) {
         if (myEpoch !== runEpoch) return;
-        // 修正v11（マスター指示 2026-05-25）: resume 後、次の動作語ナビまで一呼吸
-        await sleep(600);
+        await animateStroke(strokeIdx);
+        if (myEpoch !== runEpoch) return;
+
+        strokeIdx++;
+        if (strokeIdx < kanji.strokes.length && groupKey(kanji.strokes[strokeIdx]) === curKey) {
+          await sleep(STROKE_GAP_MS);
+          if (myEpoch !== runEpoch) return;
+        }
+      }
+
+      // グループ完了 → 児童書字を軌跡一致率で待つ
+      fragmentPathSamples = kanji.strokes
+        .slice(groupStart, strokeIdx)
+        .map((s) => samplePath(s.d, PATH_SAMPLE_STEP));
+      const now = Date.now();
+      childTrace = recentTrace
+        .filter((pt) => now - pt.ts <= RECENT_TRACE_WINDOW_MS)
+        .map((pt) => ({ x: pt.x, y: pt.y }));
+      paused = true;
+      onPaused?.();
+      if (typeof window !== 'undefined') speechSynthesis.cancel();
+      tryResumeNav();
+      if (paused) {
+        await new Promise((r) => { pauseResolver = r; });
         if (myEpoch !== runEpoch) return;
       }
 
-      if (!isLast) {
+      if (strokeIdx < kanji.strokes.length) {
         await sleep(STROKE_GAP_MS);
         if (myEpoch !== runEpoch) return;
       }
@@ -390,6 +479,9 @@
     if (typeof window !== 'undefined') {
       speechSynthesis.cancel();
     }
+    fragmentPathSamples = [];
+    childTrace = [];
+    recentTrace = [];
     paused = false;
     if (pauseResolver) { pauseResolver(); pauseResolver = null; }
     progress = kanji.strokes.map(() => 1);
@@ -440,7 +532,8 @@
 
   </div>
 
-  <!-- 覚え歌（PDF 準拠・別カラム縦スライド・現在の画を中央表示） -->
+  <!-- 覚え歌（PDF 準拠・別カラム縦スライド・現在の画を中央表示）。Part A: フラグ OFF で非表示・コードは残置 -->
+  {#if SONG_NAVI_ENABLED}
   <div class="lyric-window" aria-live="polite">
     <div
       class="lyric-strip"
@@ -461,6 +554,7 @@
       {/each}
     </div>
   </div>
+  {/if}
 </div>
 
 <style>
